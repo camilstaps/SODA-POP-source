@@ -576,51 +576,48 @@ void  hex2seg()
 void TIMER1_SERVICE_ROUTINE()
 {
 	++tcount;
-	++ktimer;
-	if (ktimer > ktimer2) {keyerControl |= TimeOut;}
 
-	++ digit_counter;
-	if (digit_counter == 6 ) {(digit_counter = 1);}
-	switch(digit_counter)
+	if (++ktimer > ktimer2)
+		keyerControl |= TimeOut;
 
-	{
-		case 1:
-			digitalWrite(8, HIGH);
-			DDRD = 0xff;
+	digitalWrite(SLED1, HIGH);
+	digitalWrite(SLED2, HIGH);
+	digitalWrite(SLED3, HIGH);
+	digitalWrite(SLED4, HIGH);
+
+	DDRD = 0x00;
+	PORTD= 0Xff;
+	digitalWrite(8, LOW);
+	for (int i = 0; i < 10; i++) sw_inputs = PIND; // debounce
+	digitalWrite(8, HIGH);
+	c = bitRead(sw_inputs,1); //read encoder clock bit
+	if (c != cLast)
+		encoder(); //call if changed
+	DDRD = 0xff;
+
+	digit_counter = (digit_counter + 1) % 4;
+
+	switch(digit_counter) {
+		case 0:
 			PORTD = digit1;
 			digitalWrite(SLED1, LOW);
-
 			break;
 
-		case 2:
-			digitalWrite(SLED1, HIGH);
+		case 1:
 			PORTD = digit2;
 			digitalWrite(SLED2, LOW);
 			digitalWrite(2, HIGH);
 			break;
 
-		case 3:
-			digitalWrite(SLED2, HIGH);
+		case 2:
 			PORTD = digit3;
 			digitalWrite(SLED3, LOW);
 			break;
 
-		case 4:
-			digitalWrite(SLED3, HIGH);
+		case 3:
 			if (digit4 == 0xeb){digit4 = 0x00;}//blank MSD if 0
 			PORTD = digit4;
 			digitalWrite(SLED4, LOW);
-			break;
-
-		case 5:                         //read the switches and encoder here
-			digitalWrite(SLED4, HIGH);
-			DDRD = 0x00;
-			PORTD= 0Xff;
-			digitalWrite(8, LOW);
-			for (int i = 0; i < 10; i++) {sw_inputs = PIND;} //read the switches 4 times to debounce
-			digitalWrite(8, HIGH);
-			c = bitRead(sw_inputs,1);  //read encoder clock bit
-			if (c !=cLast){encoder();} //call if changed
 			break;
 	}
 }
@@ -628,17 +625,15 @@ void TIMER1_SERVICE_ROUTINE()
 /*
  * encoder, test for direction only on 0 to 1 clock state change
  */
-
-void encoder()      { if (cLast ==0){
-	d = bitRead(sw_inputs,0);
-	if ( d == LOW ) {
-		EncoderFlag = 2 ;          //if low
+void encoder() {
+	if (cLast == 0){
+		d = bitRead(sw_inputs, 0);
+		if (d == LOW)
+			EncoderFlag = 2; //if low
+		else
+			EncoderFlag = 1; //if high
 	}
-	else {
-		EncoderFlag = 1;          //if high
-	}
-}
-cLast = c;            //store new state of clock
+	cLast = c; //store new state of clock
 }
 
 
