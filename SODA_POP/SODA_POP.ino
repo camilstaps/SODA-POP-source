@@ -322,7 +322,7 @@ void timeRIT(){
 
 	//  if (duration > 8000) {ee_erase(); duration =0;}
 	if (duration >5000) {calibration(); duration = 0;}
-	// if (duration >2000) {changeBand(); duration = 0;}
+	if (duration >2000) {changeBand(); duration = 0;}
 	if (duration > 50) {RIT(); duration = 0;}
 }
 
@@ -1158,43 +1158,34 @@ void changeBand(){
 }
 
 
-void nextband () {
-	++BANDpointer ;
-	if (BANDpointer == 8) {(BANDpointer = 1);}
+void nextband() {
+	++BANDpointer;
+	if (BANDpointer >= 11)
+		BANDpointer = 1;
 	get_band();
-	do  {delay(50);}
+	do
+		delay(50);
 	while (bitRead(sw_inputs,R_sw) !=1);
 }
 
 
 void get_band() {
 	switch(BANDpointer) {
-		case 1:
-			BAND16();
-			break;
-		case 2:
-			BAND80();
-			break;
-		case 3:
-			BAND60() ;
-			break ;
-		case 4:
-			BAND40() ;
-			break ;
-		case 5:
-			BAND30() ;
-			break ;
-		case 6:
-			BAND20() ;
-			break ;
-		case 7:
-			BAND17() ;
-			break ;
+		case  1: BAND160(); break;
+		case  2:  BAND80(); break;
+		case  3:  BAND60(); break;
+		case  4:  BAND40(); break;
+		case  5:  BAND30(); break;
+		case  6:  BAND20(); break;
+		case  7:  BAND17(); break;
+		case  8:  BAND15(); break;
+		case  9:  BAND12(); break;
+		case 10:  BAND10(); break;
 	}
 
 }
 
-void BAND16() {
+void BAND160() {
 	digit2 = LED_N_1;
 	digit1 = LED_N_6;
 	low_band_limit = 180000000;
@@ -1269,7 +1260,7 @@ void BAND12() {
 
 void BAND10() {
 	digit2 = LED_N_1;
-	digit1 = LED_N_2;
+	digit1 = LED_N_0;
 	low_band_limit = 2800000000u;
 	high_band_limit = 3000000000u;
 	OPfreq = 2860000000u;
