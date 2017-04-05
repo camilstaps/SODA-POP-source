@@ -135,11 +135,26 @@ Si5351 si5351;
 #define     E_sw    2
 #define     SK_FG   4
 
+#define KEY_IAMBIC 0
+#define KEY_STRAIGHT 1
+
+struct key_state {
+	byte mode:1;
+	byte timeout:1;
+	byte dit:1;
+	byte dash:1;
+	byte speed:5;
+};
+
+struct state {
+	struct key_state key;
+};
+
+struct state global_state;
+
 // register names
 int         ditTime;                    // No. milliseconds per dit
 int         dashTime;
-byte        keyerControl = 0;
-byte        keyerControlH =0;
 byte        ritflag = 0;
 byte        codespeedflag = 0;
 byte        sidtoneflag   = 0;
@@ -217,8 +232,13 @@ unsigned long  high_band_limit; //high limit, band tuning
 ISR (TIMER1_COMPA_vect) {TIMER1_SERVICE_ROUTINE();}
 
 void setup() {
-	//switch inputs
+	global_state.key.mode = KEY_IAMBIC;
+	global_state.key.speed = 20;
+	global_state.key.timeout = 1;
+	global_state.key.dash = 0;
+	global_state.key.dit = 0;
 
+	//switch inputs
 	DDRB = 0x3f;
 	DDRD = 0Xff;
 
@@ -263,14 +283,17 @@ void setup() {
 	displayfreq();
 	PLLwrite();
 	digitalWrite(MUTE, LOW);
-	if (digitalRead(DASHin) == LOW){keyerControl |= SK_EN;} //check for straight key
+
+	if (digitalRead(DASHin) == LOW)
+		global_state.key.mode = KEY_STRAIGHT;
 }
 
 void loop() {
 	// test for switch closed
-	if (bitRead(keyerControl,SK_FG) == LOW) {iambic();}
-	else
-		if (digitalRead(DOTin) == LOW)  {Straight_key();}
+	if (global_state.key.mode == KEY_IAMBIC)
+		iambic();
+	else if (digitalRead(DOTin) == LOW)
+		Straight_key();
 
 	state = bitRead(sw_inputs,E_sw);   //read change tuning step switch
 	if (state == LOW) {nextFstep();} // debounce, wait for switch release
@@ -578,7 +601,7 @@ void TIMER1_SERVICE_ROUTINE()
 	++tcount;
 
 	if (++ktimer > ktimer2)
-		keyerControl |= TimeOut;
+		global_state.key.timeout = 1;
 
 	digitalWrite(SLED1, HIGH);
 	digitalWrite(SLED2, HIGH);
@@ -663,7 +686,10 @@ void start_memory() {
 	code = MM;
 	morseOut();
 	clear_arry();
-	if (bitRead(keyerControl, SK_FG) == HIGH) { memoryflag &= MEM_EN_CL; displayfreq();}
+	if (global_state.key.mode == KEY_STRAIGHT) {
+		memoryflag &= MEM_EN_CL;
+		displayfreq();
+	}
 }
 
 /*
@@ -728,15 +754,15 @@ void store_memory1(){
 
 void int_memory_send() {
 	memoryflag |= MEM_EN;
-	if (bitRead(keyerControl, SK_FG) == HIGH){sk_mem_send();}
-	else
-
+	if (global_state.key.mode == KEY_STRAIGHT) {
+		sk_mem_send();
+	} else {
 		do {
 			if (digitalRead(DASHin) == LOW) { send_memory0();}
 			if (digitalRead(DOTin) == LOW) {  send_memory1();}
 			if (bitRead(sw_inputs,R_sw) !=1){memoryflag =0; displayfreq(); digitalWrite(MUTE, LOW);}
-		}
-		while (bitRead(memoryflag, 7) !=0);
+		} while (bitRead(memoryflag, 7) !=0);
+	}
 	do delay(20);
 	while (bitRead(sw_inputs, R_sw) == LOW);
 }
@@ -797,14 +823,15 @@ void inkeyer() {
 
 	ktimer2 = dashTime*2;
 	ktimer = 0;
-	keyerControl &= TimeOutC;
+	global_state.key.timeout = 0;
 	do {
 		if (digitalRead(DASHin) == LOW) {dash();} // dash
 		if (digitalRead(DOTin) == LOW) {dot();}  //dot
-		if (keyerControlH &= DAH_L == 1) {dash();}
-		if (keyerControl &= DIT_L == 1) {dot();}
-	}
-	while (bitRead(keyerControl,3) != 1);
+		if (global_state.key.dash)
+			dash();
+		if (global_state.key.dit)
+			dot();
+	} while (!global_state.key.timeout);
 
 	++LOC ;
 	if (LOC == 64) {--LOC;}
@@ -813,13 +840,12 @@ void inkeyer() {
 
 	ktimer2 = dashTime*2;
 	ktimer = 0;
-	keyerControl &= TimeOutC;
+	global_state.key.timeout = 0;
 
 	do {
 		if (digitalRead(DASHin) == LOW) {keyer();} // dash
 		if (digitalRead(DOTin) == LOW) {keyer();}  //dot
-	}
-	while (bitRead(keyerControl,3) != 1);
+	} while (!global_state.key.timeout);
 
 	++LOC;
 	if (LOC == 64) {--LOC;}
@@ -837,23 +863,25 @@ void  dash(){
 	code = code << 1;
 	code = code |= bit0set;
 	tone(A2, 600);
-	keyerControlH &= DIT_LC;
+	global_state.key.dit = 0;
 	ktimer2 = dashTime;
 	ktimer =0;
-	keyerControl &= TimeOutC;
-	do  {update_Dot_Latch();}
-	while (bitRead(keyerControl,3) != 1);
+	global_state.key.timeout = 0;
+	do
+		update_Dot_Latch();
+	while (!global_state.key.timeout);
 
 	digitalWrite(TXEN, LOW);
 	noTone(A2);
 
 	ktimer2 = ditTime;
 	ktimer = 0;
-	keyerControl &= TimeOutC;
+	global_state.key.timeout = 0;
 
 
-	do  {update_Dot_Latch();}
-	while (bitRead(keyerControl,3) != 1);
+	do
+		update_Dot_Latch();
+	while (!global_state.key.timeout);
 }
 
 void  dot() {
@@ -862,31 +890,35 @@ void  dot() {
 	code  = code << 1;
 	tone(A2, 600);
 	ktimer2 = ditTime;
-	keyerControl  &= DIT_LC;
+	global_state.key.dit = 0;
 	ktimer =0;
-	keyerControl &= TimeOutC;
-	do {update_Dash_Latch();}
-	while (bitRead(keyerControl,3) != 1);
+	global_state.key.timeout = 0;
+	do
+		update_Dash_Latch();
+	while (!global_state.key.timeout);
 
 	digitalWrite(TXEN, LOW);
 	noTone(A2);
 	ktimer2 = ditTime;
 	ktimer =0;
-	keyerControl &= TimeOutC;
+	global_state.key.timeout = 0;
 
-	do {update_Dash_Latch();}
-	while (bitRead(keyerControl,3) != 1);
+	do
+		update_Dash_Latch();
+	while (!global_state.key.timeout);
 
 }
 
 void update_Dot_Latch()
 {
-	if (digitalRead(DOTin) == LOW){keyerControl |= DIT_L;}
+	if (digitalRead(DOTin) == LOW)
+		global_state.key.dit = 1;
 }
 
 void update_Dash_Latch()
 {
-	if (digitalRead(DASHin) == LOW){keyerControlH |= DAH_L;}
+	if (digitalRead(DASHin) == LOW)
+		global_state.key.dash = 1;
 }
 
 // clear the message memory bank by filling with 0xff
