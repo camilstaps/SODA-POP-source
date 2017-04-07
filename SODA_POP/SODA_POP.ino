@@ -150,7 +150,7 @@ struct state {
   struct key_state key;
 };
 
-struct state global_state;
+struct state state;
 
 // register names
 int         ditTime;                    // No. milliseconds per dit
@@ -165,7 +165,6 @@ byte        letterTime;
 byte        wordTime;
 byte        code=0x01;
 byte        spaceTime;
-byte        state;
 long        myMdata[64];
 unsigned long tcount;
 long        duration=0;
@@ -232,11 +231,11 @@ unsigned long  high_band_limit; //high limit, band tuning
 ISR (TIMER1_COMPA_vect) {TIMER1_SERVICE_ROUTINE();}
 
 void setup() {
-  global_state.key.mode = KEY_IAMBIC;
-  global_state.key.speed = 20;
-  global_state.key.timeout = 1;
-  global_state.key.dash = 0;
-  global_state.key.dit = 0;
+  state.key.mode = KEY_IAMBIC;
+  state.key.speed = 20;
+  state.key.timeout = 1;
+  state.key.dash = 0;
+  state.key.dit = 0;
 
   //switch inputs
   DDRB = 0x3f;
@@ -285,34 +284,36 @@ void setup() {
   digitalWrite(MUTE, LOW);
 
   if (digitalRead(DASHin) == LOW)
-    global_state.key.mode = KEY_STRAIGHT;
+    state.key.mode = KEY_STRAIGHT;
 }
 
 void loop() {
   // test for switch closed
-  if (global_state.key.mode == KEY_IAMBIC)
+  if (state.key.mode == KEY_IAMBIC)
     iambic();
   else if (digitalRead(DOTin) == LOW)
     Straight_key();
 
-  state = bitRead(sw_inputs,E_sw);   //read change tuning step switch
-  if (state == LOW) {nextFstep();} // debounce, wait for switch release
-  while (state == LOW) {
-    delay(10) ;
-    state = bitRead(sw_inputs,E_sw);
-  }
+  // Encoder switch
+  if (bitRead(sw_inputs, E_sw) == LOW)
+    nextFstep(); // debounce, wait for switch release
+  while (bitRead(sw_inputs, E_sw) == LOW)
+    delay(10);
 
-  state = bitRead(sw_inputs,R_sw);   //read RIT switch
-  if (state == LOW) {timeRIT();}  //debounce, wait for switch release
-  while (state == LOW) {
-    delay(10) ;
-    state = bitRead(sw_inputs,R_sw);
-  }
+  // RIT switch
+  if (bitRead(sw_inputs, R_sw) == LOW)
+     timeRIT(); //debounce, wait for switch release
+  while (bitRead(sw_inputs, R_sw) == LOW)
+    delay(10);
 
-  if  (bitRead(sw_inputs,K_sw) == LOW){keyer_mode();}
+  // Keyer switch
+  if (bitRead(sw_inputs,K_sw) == LOW)
+    keyer_mode();
 
-  if (EncoderFlag == 2) {Tune_UP();} //test tune up flag
-  if (EncoderFlag == 1) {Tune_DWN();} //test tunr down flag
+  if (EncoderFlag == 2)
+    Tune_UP(); //test tune up flag
+  if (EncoderFlag == 1)
+    Tune_DWN(); //test tunr down flag
 }
 //**************************************************************
 //end of switch polling loop
@@ -325,7 +326,7 @@ void keyer_mode() {
 }
 
 void timeRIT(){
-  if  (bitRead(memoryflag,7) !=0) {  //this exits memory entry mode
+  if (bitRead(memoryflag,7) !=0) {  //this exits memory entry mode
     memoryflag &= MEM_EN_CL;
     displayfreq();
     digitalWrite(MUTE, LOW);
@@ -601,7 +602,7 @@ void TIMER1_SERVICE_ROUTINE()
   ++tcount;
 
   if (++ktimer > ktimer2)
-    global_state.key.timeout = 1;
+    state.key.timeout = 1;
 
   digitalWrite(SLED1, HIGH);
   digitalWrite(SLED2, HIGH);
@@ -686,7 +687,7 @@ void start_memory() {
   code = MM;
   morseOut();
   clear_arry();
-  if (global_state.key.mode == KEY_STRAIGHT) {
+  if (state.key.mode == KEY_STRAIGHT) {
     memoryflag &= MEM_EN_CL;
     displayfreq();
   }
@@ -754,7 +755,7 @@ void store_memory1(){
 
 void int_memory_send() {
   memoryflag |= MEM_EN;
-  if (global_state.key.mode == KEY_STRAIGHT) {
+  if (state.key.mode == KEY_STRAIGHT) {
     sk_mem_send();
   } else {
     do {
@@ -823,15 +824,15 @@ void inkeyer() {
 
   ktimer2 = dashTime*2;
   ktimer = 0;
-  global_state.key.timeout = 0;
+  state.key.timeout = 0;
   do {
     if (digitalRead(DASHin) == LOW) {dash();} // dash
     if (digitalRead(DOTin) == LOW) {dot();}  //dot
-    if (global_state.key.dash)
+    if (state.key.dash)
       dash();
-    if (global_state.key.dit)
+    if (state.key.dit)
       dot();
-  } while (!global_state.key.timeout);
+  } while (!state.key.timeout);
 
   ++LOC ;
   if (LOC == 64) {--LOC;}
@@ -840,12 +841,12 @@ void inkeyer() {
 
   ktimer2 = dashTime*2;
   ktimer = 0;
-  global_state.key.timeout = 0;
+  state.key.timeout = 0;
 
   do {
     if (digitalRead(DASHin) == LOW) {keyer();} // dash
     if (digitalRead(DOTin) == LOW) {keyer();}  //dot
-  } while (!global_state.key.timeout);
+  } while (!state.key.timeout);
 
   ++LOC;
   if (LOC == 64) {--LOC;}
@@ -863,25 +864,25 @@ void  dash(){
   code = code << 1;
   code = code |= bit0set;
   tone(A2, 600);
-  global_state.key.dit = 0;
+  state.key.dit = 0;
   ktimer2 = dashTime;
   ktimer =0;
-  global_state.key.timeout = 0;
+  state.key.timeout = 0;
   do
     update_Dot_Latch();
-  while (!global_state.key.timeout);
+  while (!state.key.timeout);
 
   digitalWrite(TXEN, LOW);
   noTone(A2);
 
   ktimer2 = ditTime;
   ktimer = 0;
-  global_state.key.timeout = 0;
+  state.key.timeout = 0;
 
 
   do
     update_Dot_Latch();
-  while (!global_state.key.timeout);
+  while (!state.key.timeout);
 }
 
 void  dot() {
@@ -890,35 +891,35 @@ void  dot() {
   code  = code << 1;
   tone(A2, 600);
   ktimer2 = ditTime;
-  global_state.key.dit = 0;
+  state.key.dit = 0;
   ktimer =0;
-  global_state.key.timeout = 0;
+  state.key.timeout = 0;
   do
     update_Dash_Latch();
-  while (!global_state.key.timeout);
+  while (!state.key.timeout);
 
   digitalWrite(TXEN, LOW);
   noTone(A2);
   ktimer2 = ditTime;
   ktimer =0;
-  global_state.key.timeout = 0;
+  state.key.timeout = 0;
 
   do
     update_Dash_Latch();
-  while (!global_state.key.timeout);
+  while (!state.key.timeout);
 
 }
 
 void update_Dot_Latch()
 {
   if (digitalRead(DOTin) == LOW)
-    global_state.key.dit = 1;
+    state.key.dit = 1;
 }
 
 void update_Dash_Latch()
 {
   if (digitalRead(DASHin) == LOW)
-    global_state.key.dash = 1;
+    state.key.dash = 1;
 }
 
 // clear the message memory bank by filling with 0xff
@@ -1046,10 +1047,12 @@ void calibration(){
   Wire.endTransmission();
   delay(500);
 
-  state = bitRead (sw_inputs,K_sw);
-  while (state == HIGH) {if  (EncoderFlag == 1) {ADJ_UP();}
-    if  (EncoderFlag == 2) {ADJ_DWN();}
-    state = bitRead (sw_inputs,K_sw);}
+  while (bitRead(sw_inputs, K_sw) == HIGH) {
+    if (EncoderFlag == 1)
+      ADJ_UP();
+    else if (EncoderFlag == 2)
+      ADJ_DWN();
+  }
 
 
   temp = cal_value;
@@ -1062,16 +1065,19 @@ void calibration(){
   Wire.write(0xfe);
   Wire.endTransmission();
 
-  while (state == LOW) {delay(100); state = bitRead (sw_inputs,K_sw);}
+  while (bitRead(sw_inputs, K_sw) == LOW)
+    delay(100);
   digitalWrite(MUTE, LOW);
   OPfreq = IFfreq_default;
   calwrite2();
   displayfreq();
   delay(500);
-  state = bitRead (sw_inputs,K_sw);
-  while (state == HIGH) {if  (EncoderFlag == 2) {ADJ_UP_f();}
-    if  (EncoderFlag == 1) {ADJ_DWN_f();}
-    state = bitRead (sw_inputs,K_sw);}
+  while (bitRead(sw_inputs, K_sw) == HIGH) {
+    if  (EncoderFlag == 2)
+      ADJ_UP_f();
+    if  (EncoderFlag == 1)
+      ADJ_DWN_f();
+  }
 
   IFfreq = OPfreq;
   temp = OPfreq;
@@ -1095,13 +1101,15 @@ void calibration(){
   Wire.write(0xfc);
   Wire.endTransmission();
 
-  while (state == HIGH) {delay(100); state = bitRead (sw_inputs,K_sw);}
+  while (bitRead(sw_inputs, K_sw) == HIGH)
+    delay(100);
   Wire.beginTransmission(0x60); //turn off Tx clock output
   Wire.write(REG+3);
   Wire.write(0xfe);
   Wire.endTransmission();
   displayfreq();
-  while (state == LOW) {delay(100); state = bitRead (sw_inputs,K_sw);}
+  while (bitRead(sw_inputs, K_sw) == LOW)
+    delay(100);
   delay(500);
 }
 
@@ -1169,7 +1177,8 @@ void changeBand(){
   digit3 = LED_n;
   get_band();
 
-  while (state == LOW) {delay(100); state = bitRead (sw_inputs,K_sw);}
+  while (bitRead(sw_inputs, K_sw) == LOW)
+    delay(100);
 
   do {
     if (bitRead(sw_inputs,R_sw) !=1) {nextband();}
