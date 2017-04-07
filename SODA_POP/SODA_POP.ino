@@ -305,31 +305,42 @@ void timeRIT(){
 
   do {
     duration = tcount - start_time;
-    /*if (duration >8000) {
+#ifdef OPT_ERASE_EEPROM
+    if (duration > 8000) {
       state.display[3] = LED_E;
       state.display[1] = LED_r;
       state.display[1] = LED_A;
       state.display[0] = LED_N_5;
-    } else*/ if (duration > 5000) {
+    } else
+#endif
+    if (duration > 5000) {
       state.display[3] = LED_C;
       state.display[2] = LED_A;
       state.display[1] = LED_L;
       state.display[0] = 0x00;
-    } else if (duration > 2000) {
+    }
+#ifdef OPT_BAND_SELECT
+    else if (duration > 2000) {
       state.display[3] = LED_N_6;
       state.display[2] = LED_n;
       state.display[1] = 0x00;
       state.display[0] = 0x00;
     }
+#endif
     delay(1);
   } while (!bitRead(sw_inputs,R_sw));
 
-  /*if (duration > 8000)
+#ifdef OPT_ERASE_EEPROM
+  if (duration > 8000)
     ee_erase();
-  else*/ if (duration > 5000)
+  else
+#endif
+  if (duration > 5000)
     calibration();
+#ifdef OPT_BAND_SELECT
   else if (duration > 2000)
     changeBand();
+#endif
   else if (duration > 50)
     RIT();
 }
@@ -1131,15 +1142,13 @@ void enable_rx_tx(byte rx, byte tx) {
   Wire.endTransmission();
 }
 
-/*
 void ee_erase() {
-  for (int i=0; i<=7; i++){
-  EEPROM.write(i, 0xff);}
+  for (byte i=0; i<=7; i++)
+    EEPROM.write(i, 0xff);
   state.display[3] = LED_d;
   state.display[2] = LED_N_0;
   state.display[1] = LED_n;
   state.display[0] = LED_E;
 }
-*/
 
 // vim: tabstop=2 shiftwidth=2 expandtab:
