@@ -73,6 +73,9 @@ const byte LED_DIGITS[] =
 #define E_sw  2
 #define SK_FG 4
 
+#define SI5351_CLK_RX SI5351_CLK0
+#define SI5351_CLK_TX SI5351_CLK1
+
 #define IF_DEFAULT 491480000
 
 enum band {
@@ -190,7 +193,6 @@ volatile int cLast = HIGH;    // init last val the same, low
 volatile int d = HIGH;        // make data val low
 
 unsigned long IFfreq;
-int           REG = 0;
 long          cal_value = 15000;
 
 ISR (TIMER1_COMPA_vect) {TIMER1_SERVICE_ROUTINE();}
@@ -214,10 +216,7 @@ void setup() {
   digitalWrite(MUTE, HIGH);
   digitalWrite(TXEN, LOW);
   si5351.init(SI5351_CRYSTAL_LOAD_6PF, 0); //set PLL xtal load
-  Wire.beginTransmission(0x60); //turn off the Tx output, which gets turned on when the chip is updated
-  Wire.write(REG+3);
-  Wire.write(0xfe);
-  Wire.endTransmission();
+  enable_rx_tx(1, 0);
 
   noInterrupts();
   TCCR1A = 0;
@@ -767,12 +766,8 @@ void keyer(){
 void inkeyer() {
   digitalWrite(MUTE, HIGH);
 
-  Wire.beginTransmission(0x60);
-  Wire.write(REG+3);
-  Wire.write(0xfd);
-  Wire.endTransmission();
-
-  si5351.set_freq(TX_FREQ(state), 0ull, SI5351_CLK1);
+  enable_rx_tx(0, 1);
+  si5351.set_freq(TX_FREQ(state), 0ull, SI5351_CLK_TX);
 
   state.key.timer = state.key.dash_time * 2;
   state.key.timeout = 0;
@@ -801,10 +796,7 @@ void inkeyer() {
   ++LOC;
   if (LOC == 64) {--LOC;}
   myMdata[LOC] = 0x00;
-  Wire.beginTransmission(0x60); //turn off the Tx output, which gets turned on when the chip is updated
-  Wire.write(REG+3);
-  Wire.write(0xfe);
-  Wire.endTransmission();
+  enable_rx_tx(1, 0);
   if (bitRead(memoryflag,7) != 1) {digitalWrite(MUTE, LOW);}
 }
 
@@ -883,10 +875,7 @@ void clear_arry() {
 void int_morseOut()
 {
   digitalWrite(MUTE, HIGH);
-  Wire.beginTransmission(0x60);
-  Wire.write(REG+3);
-  Wire.write(0xfd);
-  Wire.endTransmission();
+  enable_rx_tx(0, 1);
   si5351.set_freq(TX_FREQ(state), 0ull, SI5351_CLK1);
 
   memoryflag &= MEM_EN_CL;
@@ -896,11 +885,7 @@ void int_morseOut()
     if (code != 0xff) {morseOut();}
   }
 
-  Wire.beginTransmission(0x60);
-  Wire.write(REG+3);
-  Wire.write(0xfe);
-  Wire.endTransmission();
-
+  enable_rx_tx(1, 0);
   digitalWrite(MUTE, LOW);
 }
 
@@ -946,10 +931,7 @@ void loadWPM (byte wpm) {
 
 void Straight_key(){
   digitalWrite(MUTE, HIGH);
-  Wire.beginTransmission(0x60);
-  Wire.write(REG+3);
-  Wire.write(0xfd);
-  Wire.endTransmission();
+  enable_rx_tx(0, 1);
 
   si5351.set_freq(TX_FREQ(state), 0ull, SI5351_CLK1);
   tone(A2, 600);
@@ -961,10 +943,8 @@ void Straight_key(){
   digitalWrite(TXEN, LOW);
   noTone(A2);
   delay(5);
-  Wire.beginTransmission(0x60);
-  Wire.write(REG+3);
-  Wire.write(0xfe);
-  Wire.endTransmission();
+
+  enable_rx_tx(1, 0);
   digitalWrite(MUTE, LOW);
 }
 
@@ -987,10 +967,7 @@ void calibration(){
   state.display[1] = LED_L;
   state.display[0] = 0x00;
   calwrite();
-  Wire.beginTransmission(0x60); //turn on Tx clock output
-  Wire.write(REG+3);
-  Wire.write(0xfd);
-  Wire.endTransmission();
+  enable_rx_tx(0, 1);
   delay(500);
 
   while (bitRead(sw_inputs, K_sw) == HIGH) {
@@ -1006,10 +983,7 @@ void calibration(){
   temp = cal_value >>8;
   EEPROM.write(5, temp);
 
-  Wire.beginTransmission(0x60); //turn off Tx clock output
-  Wire.write(REG+3);
-  Wire.write(0xfe);
-  Wire.endTransmission();
+  enable_rx_tx(1, 0);
 
   while (bitRead(sw_inputs, K_sw) == LOW)
     delay(100);
@@ -1042,17 +1016,11 @@ void calibration(){
   state.display[1] = LED_A;
   state.display[0] = 0x00;
   si5351.set_freq(state.op_freq, 0ull, SI5351_CLK1);
-  Wire.beginTransmission(0x60); //turn off Tx clock output
-  Wire.write(REG+3);
-  Wire.write(0xfc);
-  Wire.endTransmission();
+  enable_rx_tx(0, 0);
 
   while (bitRead(sw_inputs, K_sw) == HIGH)
     delay(100);
-  Wire.beginTransmission(0x60); //turn off Tx clock output
-  Wire.write(REG+3);
-  Wire.write(0xfe);
-  Wire.endTransmission();
+  enable_rx_tx(1, 0);
   displayfreq();
   while (bitRead(sw_inputs, K_sw) == LOW)
     delay(100);
@@ -1152,6 +1120,15 @@ void setup_band() {
   state.op_freq = BAND_OP_FREQS[state.band];
   state.display[0] = LED_DIGITS[BAND_DIGITS_1[state.band]];
   state.display[1] = LED_DIGITS[BAND_DIGITS_2[state.band]];
+}
+
+void enable_rx_tx(byte rx, byte tx) {
+  Wire.beginTransmission(0x60);
+  Wire.write(3);
+  Wire.write(0xfc
+      | (rx ? 0x02 : 0x00)
+      | (tx ? 0x01 : 0x01));
+  Wire.endTransmission();
 }
 
 /*
