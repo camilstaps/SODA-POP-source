@@ -73,6 +73,9 @@ Si5351 si5351;
 #define   LED_L     0x62
 #define   LED_P     0xf1
 
+const byte LED_DIGITS[] =
+  { LED_N_0, LED_N_1, LED_N_2, LED_N_3, LED_N_4
+  , LED_N_5, LED_N_6, LED_N_7, LED_N_8, LED_N_9};
 
 // Morse coding
 #define MA  0b101              // A
@@ -145,13 +148,15 @@ struct key_state {
 struct state {
   struct key_state key;
 
+  unsigned long op_freq;
+
   unsigned long rit_tx_freq;
   byte rit:1;
 };
 
 struct state state;
 
-#define TX_FREQ (state.rit ? state.rit_tx_freq : OPfreq)
+#define TX_FREQ (state.rit ? state.rit_tx_freq : state.op_freq)
 
 // register names
 byte        codespeedflag = 0;
@@ -203,7 +208,6 @@ volatile int d = HIGH;        // make data val low
 unsigned long   frequency;
 unsigned long   freq_result;
 unsigned long   VFOfreq;
-unsigned long   OPfreq;
 unsigned long   time1;
 unsigned long   time0;
 unsigned long   temp ;
@@ -397,21 +401,24 @@ void Tune_DWN() {
 
 // adjust the operating frequency
 void FREQ_incerment() {
-
-  OPfreq  = OPfreq + stepK;  //add frequenc tuning step to frequency word
-  if (OPfreq > high_band_limit) {FREQ_decerment();} //band tuning limits
-  if (state.rit){RITdisplay();} //test for RIT mode
-  else  displayfreq();
+  state.op_freq += stepK;  //add frequenc tuning step to frequency word
+  if (state.op_freq > high_band_limit)
+    FREQ_decerment(); //band tuning limits
+  if (state.rit)
+    RITdisplay(); //test for RIT mode
+  else
+    displayfreq();
   PLLwrite();
 }
 
 void FREQ_decerment() {
-
-  OPfreq  = OPfreq - stepK;
-
-  if (OPfreq < low_band_limit) {FREQ_incerment();}
-  if (state.rit){RITdisplay();}
-  else  displayfreq();
+  state.op_freq -= stepK;
+  if (state.op_freq < low_band_limit)
+    FREQ_incerment();
+  if (state.rit)
+    RITdisplay();
+  else
+    displayfreq();
   PLLwrite();
 }
 
@@ -486,12 +493,8 @@ void  CS_dwn() {
 
 void wr_CS() {
   loadWPM(state.key.speed);
-  freq_result = state.key.speed % 10;
-  hex2seg();
-  digit1 = digitX;
-  freq_result = state.key.speed / 10;
-  hex2seg();
-  digit2 = digitX;
+  digit1 = LED_DIGITS[state.key.speed % 10];
+  digit2 = LED_DIGITS[state.key.speed / 10];
 }
 
 
@@ -507,35 +510,31 @@ void RIT() {
 
 void RITenable(){
   state.rit = 1;
-  state.rit_tx_freq = OPfreq;
+  state.rit_tx_freq = state.op_freq;
   RITdisplay();
 }
 
 void RIText() {
   state.rit = 0;
-  OPfreq = state.rit_tx_freq;
+  state.op_freq = state.rit_tx_freq;
   PLLwrite();
   displayfreq();
 }
 
 void RITdisplay()
 {
-  if (state.rit_tx_freq > OPfreq) {
-    frequency = state.rit_tx_freq - OPfreq;
+  if (state.rit_tx_freq > state.op_freq) {
+    frequency = state.rit_tx_freq - state.op_freq;
     digit3 = LED_neg;
   } else {
-    frequency = OPfreq - state.rit_tx_freq;
+    frequency = state.op_freq - state.rit_tx_freq;
     digit3 = 0x00;
   }
 
   digit4 = LED_r;
   frequency /= 100;
-  freq_result = (frequency % 10000) / 1000;
-  hex2seg();
-  digit2 = digitX;
-  freq_result = (frequency % 1000) / 100;
-  hex2seg();
-  digit1 = digitX;
+  digit2 = LED_DIGITS[(frequency % 10000) / 1000];
+  digit1 = LED_DIGITS[(frequency % 1000) / 100];
 }
 
 ////////////////////////////////////////////////
@@ -544,37 +543,11 @@ void RITdisplay()
 ///////////////////////////////////////////////
 
 void displayfreq(){
-  frequency = OPfreq/100;            //first divide by 100 to remove the fractional Hz digits
-  freq_result = frequency%1000000;     //get the 100,000 kHz digit by first getting the remainder
-  freq_result = freq_result / 100000;  //divide the remainder by 100,000 to get the MSD
-  hex2seg();                           //convert the result to the 7 segment code
-  digit4 = digitX;                     //load the digit into the display memory for MSD
-  freq_result = frequency%100000;      //repeat the process for 10K, 1K and 100 Hz digits
-  freq_result = freq_result/10000;
-  hex2seg();
-  digit3 = digitX;
-  freq_result = frequency%10000;
-  freq_result = freq_result/1000;
-  hex2seg();
-  digit2 = digitX;
-  freq_result = frequency%1000;
-  freq_result = freq_result/100;
-  hex2seg();
-  digit1 = digitX;
-}
-
-void  hex2seg()
-{
-  if (freq_result == 0) {digitX = LED_N_0;} //this is the conversion table
-  if (freq_result == 1) {digitX = LED_N_1;}
-  if (freq_result == 2) {digitX = LED_N_2;}
-  if (freq_result == 3) {digitX = LED_N_3;}
-  if (freq_result == 4) {digitX = LED_N_4;}
-  if (freq_result == 5) {digitX = LED_N_5;}
-  if (freq_result == 6) {digitX = LED_N_6;}
-  if (freq_result == 7) {digitX = LED_N_7;}
-  if (freq_result == 8) {digitX = LED_N_8;}
-  if (freq_result == 9) {digitX = LED_N_9;}
+  frequency = state.op_freq/100;       //first divide by 100 to remove the fractional Hz digits
+  digit4 = LED_DIGITS[(frequency % 1000000) / 100000];
+  digit3 = LED_DIGITS[(frequency % 100000) / 10000];
+  digit2 = LED_DIGITS[(frequency % 10000) / 1000];
+  digit1 = LED_DIGITS[(frequency % 1000) / 100];
 }
 
 /*
@@ -653,8 +626,9 @@ void encoder() {
  */
 
 void PLLwrite() {
-  if (OPfreq >=IFfreq) {(VFOfreq = OPfreq - IFfreq);} // test if IF is larger then operating freq
-  else {(VFOfreq = IFfreq + OPfreq);}
+  VFOfreq = state.op_freq >= IFfreq
+    ? state.op_freq - IFfreq
+    : state.op_freq + IFfreq;
   si5351.set_freq(VFOfreq, 0ULL, SI5351_CLK0);
 }
 
@@ -1051,7 +1025,7 @@ void calibration(){
   while (bitRead(sw_inputs, K_sw) == LOW)
     delay(100);
   digitalWrite(MUTE, LOW);
-  OPfreq = IFfreq_default;
+  state.op_freq = IFfreq_default;
   calwrite2();
   displayfreq();
   delay(500);
@@ -1062,14 +1036,14 @@ void calibration(){
       ADJ_DWN_f();
   }
 
-  IFfreq = OPfreq;
-  temp = OPfreq;
+  IFfreq = state.op_freq;
+  temp = state.op_freq;
   EEPROM.write(0, temp);
-  temp = OPfreq >>8;
+  temp = state.op_freq >>8;
   EEPROM.write(1, temp);
-  temp = OPfreq >>16;
+  temp = state.op_freq >>16;
   EEPROM.write(2, temp);
-  temp = OPfreq >> 24;
+  temp = state.op_freq >> 24;
   EEPROM.write(3, temp);
 
   changeBand();
@@ -1078,7 +1052,7 @@ void calibration(){
   digit3 = LED_E;
   digit2 = LED_A;
   digit1 = 0x00;
-  si5351.set_freq(OPfreq, 0ULL, SI5351_CLK1);
+  si5351.set_freq(state.op_freq, 0ULL, SI5351_CLK1);
   Wire.beginTransmission(0x60); //turn off Tx clock output
   Wire.write(REG+3);
   Wire.write(0xfc);
@@ -1097,13 +1071,13 @@ void calibration(){
 }
 
 void ADJ_UP_f(){
-  OPfreq = OPfreq + 1000;
+  state.op_freq += 1000;
   EncoderFlag = 0;
   calwrite2();
 }
 
 void ADJ_DWN_f() {
-  OPfreq = OPfreq - 1000;
+  state.op_freq -= 1000;
   EncoderFlag = 0;
   calwrite2();
 }
@@ -1126,7 +1100,7 @@ void calwrite() {
 }
 
 void calwrite2() {
-  si5351.set_freq(OPfreq, 0ULL, SI5351_CLK0);
+  si5351.set_freq(state.op_freq, 0ULL, SI5351_CLK0);
   displayfreq();
 }
 
@@ -1209,7 +1183,7 @@ void BAND160() {
   digit1 = LED_N_6;
   low_band_limit = 180000000;
   high_band_limit = 182000000;
-  OPfreq = 180200000;
+  state.op_freq = 180200000;
 }
 
 void BAND80() {
@@ -1217,7 +1191,7 @@ void BAND80() {
   digit1 = LED_N_0;
   low_band_limit = 350000000;
   high_band_limit = 400000000;
-  OPfreq = 356000000;
+  state.op_freq = 356000000;
 }
 
 void BAND60() {
@@ -1225,7 +1199,7 @@ void BAND60() {
   digit1 = LED_N_0;
   low_band_limit = 535150000;
   high_band_limit = 536650000;
-  OPfreq = 535150000;
+  state.op_freq = 535150000;
 }
 
 
@@ -1234,7 +1208,7 @@ void BAND40() {
   digit1 = LED_N_0;
   low_band_limit = 700000000;
   high_band_limit = 730000000;
-  OPfreq = 703000000;
+  state.op_freq = 703000000;
 }
 
 void BAND30() {
@@ -1242,7 +1216,7 @@ void BAND30() {
   digit1 = LED_N_0;
   low_band_limit = 1010000000;
   high_band_limit = 1015000000;
-  OPfreq = 1011800000;
+  state.op_freq = 1011800000;
 }
 
 void BAND20() {
@@ -1250,7 +1224,7 @@ void BAND20() {
   digit1 = LED_N_0;
   low_band_limit = 1400000000;
   high_band_limit = 1450000000;
-  OPfreq = 1406000000;
+  state.op_freq = 1406000000;
 }
 
 void BAND17() {
@@ -1258,7 +1232,7 @@ void BAND17() {
   digit1 = LED_N_7;
   low_band_limit = 1806800000;
   high_band_limit = 1850000000;
-  OPfreq = 1807000000;
+  state.op_freq = 1807000000;
 }
 
 void BAND15() {
@@ -1266,7 +1240,7 @@ void BAND15() {
   digit1 = LED_N_5;
   low_band_limit = 2100000000u;
   high_band_limit = 2150000000u;
-  OPfreq = 2106000000u;
+  state.op_freq = 2106000000u;
 }
 
 void BAND12() {
@@ -1274,7 +1248,7 @@ void BAND12() {
   digit1 = LED_N_2;
   low_band_limit = 2489000000u;
   high_band_limit = 2500000000u;
-  OPfreq = 2490600000u;
+  state.op_freq = 2490600000u;
 }
 
 void BAND10() {
@@ -1282,7 +1256,7 @@ void BAND10() {
   digit1 = LED_N_0;
   low_band_limit = 2800000000u;
   high_band_limit = 3000000000u;
-  OPfreq = 2860000000u;
+  state.op_freq = 2860000000u;
 }
 
 /*
