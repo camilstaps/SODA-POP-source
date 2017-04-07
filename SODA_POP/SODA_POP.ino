@@ -150,11 +150,11 @@ struct state {
   struct key_state key;
 
   enum band band;
-
   unsigned long op_freq;
-
   unsigned long rit_tx_freq;
+
   byte rit:1;
+  byte code_speed:1;
 
   byte display[4];
 };
@@ -164,7 +164,6 @@ struct state state;
 #define TX_FREQ(state) (state.rit ? state.rit_tx_freq : state.op_freq)
 
 // register names
-byte        codespeedflag = 0;
 byte        sidtoneflag   = 0;
 byte        memoryflag = 0;
 byte        code=0x01;
@@ -286,9 +285,12 @@ void loop() {
 //**************************************************************
 
 void keyer_mode() {
-  if ((codespeedflag & CSflag) == 1) {adjCSoff();}
-  if (bitRead(memoryflag,7) != 0) {store_mem();}
-  else timebutton();
+  if (state.code_speed)
+    adjCSoff();
+  if (bitRead(memoryflag,7))
+    store_mem();
+  else
+    timebutton();
 }
 
 void timeRIT(){
@@ -393,22 +395,28 @@ void iambic(){
 
 //test if paddle used for keying or code speed adj
 void Ptest() {
-  if (codespeedflag &= CSflag == 1) {CS_Pinput();}
-  else keyer();
+  if (state.code_speed)
+    CS_Pinput();
+  else
+    keyer();
 }
 
 //frequency or code speed adjust test
 
-void  Tune_UP() {
+void Tune_UP() {
   EncoderFlag = 0;
-  if (codespeedflag &= CSflag == 1) {CS_up();}
-  else FREQ_incerment();
+  if (state.code_speed)
+    CS_up();
+  else
+    FREQ_incerment();
 }
 
 void Tune_DWN() {
   EncoderFlag = 0;
-  if (codespeedflag &= CSflag == 1) {CS_dwn();}
-  else FREQ_decerment();
+  if (state.code_speed)
+    CS_dwn();
+  else
+    FREQ_decerment();
 }
 
 
@@ -455,14 +463,14 @@ void  nextFstep () {
  */
 
 void CodeSpeed(){
-  codespeedflag |= CSflag;
+  state.code_speed = 1;
   wr_CS();
 }
 
 
 //clear code speed adjust mode
 void adjCSoff() {
-  codespeedflag = 0x00;
+  state.code_speed = 0;
   displayfreq();
 
   do {delay(100);}
