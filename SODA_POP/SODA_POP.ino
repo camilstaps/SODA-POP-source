@@ -225,7 +225,6 @@ int         ktimer2 = 0;
 byte        code=0x01;
 long        myMdata[64];
 unsigned long tcount;
-long        duration=0;
 
 byte        LOC = 0;
 int         Eadr;
@@ -233,13 +232,10 @@ int         Eadr;
 byte EncoderFlag = 0;
 byte sw_inputs ;
 
-volatile int    digit_counter = 1;
-
 const int   MUTE =  A3;
 const int   TXEN =  13; // production A0
 const int   DASHin = A0;
 const int   DOTin = A1;
-
 
 //frequency tuning
 int         stepSize;   // tuning rate pointer
@@ -254,9 +250,6 @@ volatile int c = HIGH;        // init state of pin A
 volatile int cLast = HIGH;    // init last val the same, low
 volatile int d = HIGH;        // make data val low
 
-
-unsigned long time1;
-unsigned long time0;
 unsigned long IFfreq;
 int           REG = 0;
 long          cal_value = 15000;
@@ -362,6 +355,9 @@ void keyer_mode() {
 }
 
 void timeRIT(){
+  unsigned int duration = 0;
+  unsigned long start_time = tcount;
+
   if (bitRead(memoryflag,7) !=0) {  //this exits memory entry mode
     memoryflag &= MEM_EN_CL;
     displayfreq();
@@ -370,41 +366,69 @@ void timeRIT(){
     while (bitRead(sw_inputs,R_sw) !=1);
   }
 
-  duration = 0;
-  time0 = tcount;
-  do {time1 = tcount; duration = time1- time0; //calculate how long the button has been pushed
-    if (duration > 2000) {state.display[3] = LED_N_6; state.display[2] = LED_n; state.display[1] = 0x00; state.display[0] = 0x00;}
-    if (duration > 5000) {state.display[3] = LED_C; state.display[2] = LED_A; state.display[1] = LED_L; state.display[0] = 0x00;}
-    //if (duration >8000) {state.display[3] = LED_E; state.display[1] = LED_r; state.display[1] = LED_A; state.display[0] = LED_N_5;}
-    delay(1); }
-  while (bitRead(sw_inputs,R_sw) !=1);
-  duration = time1 - time0;
+  do {
+    duration = tcount - start_time;
+    /*if (duration >8000) {
+      state.display[3] = LED_E;
+      state.display[1] = LED_r;
+      state.display[1] = LED_A;
+      state.display[0] = LED_N_5;
+    } else*/ if (duration > 5000) {
+      state.display[3] = LED_C;
+      state.display[2] = LED_A;
+      state.display[1] = LED_L;
+      state.display[0] = 0x00;
+    } else if (duration > 2000) {
+      state.display[3] = LED_N_6;
+      state.display[2] = LED_n;
+      state.display[1] = 0x00;
+      state.display[0] = 0x00;
+    }
+    delay(1);
+  } while (!bitRead(sw_inputs,R_sw));
 
-  //  if (duration > 8000) {ee_erase(); duration =0;}
-  if (duration >5000) {calibration(); duration = 0;}
-  if (duration >2000) {changeBand(); duration = 0;}
-  if (duration > 50) {RIT(); duration = 0;}
+  /*if (duration > 8000)
+    ee_erase();
+  else*/ if (duration > 5000)
+    calibration();
+  else if (duration > 2000)
+    changeBand();
+  else if (duration > 50)
+    RIT();
 }
 
 void timebutton() {
+  unsigned int duration = 0;
+  unsigned long start_time = tcount;
 
-  duration = 0;  //clear button duration counter
-  time0 = tcount; //set basetime to current counter value
-
-  do {time1 = tcount; duration = time1- time0; //calculate how long the button has been pushed
-    if (duration > 50)   {state.display[3] = LED_N_5; state.display[2] = LED_E; state.display[1] = LED_n; state.display[0] = LED_d;} //short push message
-    if (duration > 500) {state.display[3] = LED_C; state.display[2] = LED_N_5; state.display[1] = 0x00; state.display[0] = 0x00;} //1 second push message
-    if (duration > 2000) {;state.display[3]=LED_E; state.display[2] =LED_n; state.display[1] = LED_t; state.display[0] = LED_r;}  //2 second push message
+  do {
+    duration = tcount - start_time;
+    if (duration > 2000) {
+      state.display[3] = LED_E;
+      state.display[2] = LED_n;
+      state.display[1] = LED_t;
+      state.display[0] = LED_r;
+    } else if (duration > 500) {
+      state.display[3] = LED_C;
+      state.display[2] = LED_N_5;
+      state.display[1] = 0x00;
+      state.display[0] = 0x00;
+    } else if (duration > 50) {
+      state.display[3] = LED_N_5;
+      state.display[2] = LED_E;
+      state.display[1] = LED_n;
+      state.display[0] = LED_d;
+    }
     delay(1); //for some reason a delay call has to be done when doing bit read flag tests or it locks up
     //this doesn't seem to be a problem when doing digital reads of a port pin instead.
-  }
+  } while (bitRead(sw_inputs,K_sw) == 0); // wait until the bit goes high.
 
-  while (bitRead(sw_inputs,K_sw) == 0); // wait until the bit goes high.
-
-  duration = time1- time0; //the duration result isn't saved when exiting the do/while loop, so has to be calculated again
-  if (duration >2000) {start_memory(); duration = 0;} //test duration to jump to desired function
-  if (duration >500){CodeSpeed(); duration = 0;}
-  if (duration >50){int_memory_send(); duration = 0;}
+  if (duration > 2000)
+    start_memory();
+  else if (duration > 500)
+    CodeSpeed();
+  else if (duration > 50)
+    int_memory_send();
 }
 
 //test for keyer mode, send message or store message
@@ -590,7 +614,7 @@ void displayfreq() {
  * does keyer timing and port D mulitplexing for display and
  * switch inputs.
  */
-
+volatile byte digit_counter = 0;
 void TIMER1_SERVICE_ROUTINE()
 {
   ++tcount;
@@ -1138,7 +1162,6 @@ void calwrite2() {
 }
 
 void cal_data(){
-
   unsigned long temp = 0;
 
   temp = EEPROM.read(3);
@@ -1159,7 +1182,6 @@ void cal_data(){
   cal_value = cal_value <<8;
   temp = EEPROM.read(4);
   cal_value = cal_value + temp;
-
 }
 
 void changeBand(){
