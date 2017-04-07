@@ -857,12 +857,13 @@ void inkeyer() {
   if (bitRead(memoryflag,7) != 1) {digitalWrite(MUTE, LOW);}
 }
 
-void  dash(){
-
-  if (bitRead(memoryflag,7) != 1) { digitalWrite(TXEN, HIGH);}
+void dash()
+{
+  if (bitRead(memoryflag,7) != 1)
+    digitalWrite(TXEN, HIGH);
   code = (code << 1) | bit0set;
   tone(A2, 600);
-  state.key.dit = 0;
+  state.key.dash = 0;
   ktimer2 = dashTime;
   ktimer =0;
   state.key.timeout = 0;
@@ -877,20 +878,20 @@ void  dash(){
   ktimer = 0;
   state.key.timeout = 0;
 
-
   do
     update_Dot_Latch();
   while (!state.key.timeout);
 }
 
-void  dot() {
-
-  if (bitRead(memoryflag,7) != 1) { digitalWrite(TXEN, HIGH);}
-  code  = code << 1;
+void dot()
+{
+  if (bitRead(memoryflag,7) != 1)
+    digitalWrite(TXEN, HIGH);
+  code <<= 1;
   tone(A2, 600);
   ktimer2 = ditTime;
   state.key.dit = 0;
-  ktimer =0;
+  ktimer = 0;
   state.key.timeout = 0;
   do
     update_Dash_Latch();
@@ -899,7 +900,7 @@ void  dot() {
   digitalWrite(TXEN, LOW);
   noTone(A2);
   ktimer2 = ditTime;
-  ktimer =0;
+  ktimer = 0;
   state.key.timeout = 0;
 
   do
