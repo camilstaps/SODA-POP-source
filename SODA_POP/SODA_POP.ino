@@ -150,12 +150,12 @@ struct key_state {
 
 struct state {
   struct key_state key;
+  byte rit:1;
 };
 
 struct state state;
 
 // register names
-byte        ritflag = 0;
 byte        codespeedflag = 0;
 byte        sidtoneflag   = 0;
 byte        memoryflag = 0;
@@ -409,7 +409,7 @@ void FREQ_incerment() {
 
   OPfreq  = OPfreq + stepK;  //add frequenc tuning step to frequency word
   if (OPfreq > high_band_limit) {FREQ_decerment();} //band tuning limits
-  if (ritflag &= RIT_ON == 1){RITdisplay();} //test for RIT mode
+  if (state.rit){RITdisplay();} //test for RIT mode
   else  displayfreq();
   PLLwrite();
 }
@@ -419,7 +419,7 @@ void FREQ_decerment() {
   OPfreq  = OPfreq - stepK;
 
   if (OPfreq < low_band_limit) {FREQ_incerment();}
-  if (ritflag &= RIT_ON == 1){RITdisplay();}
+  if (state.rit){RITdisplay();}
   else  displayfreq();
   PLLwrite();
 }
@@ -507,19 +507,18 @@ void wr_CS() {
  */
 
 void RIT() {
-  if ((ritflag & RIT_ON) == 1){RIText();}
+  if (state.rit){RIText();}
   else RITenable();
 }
 
 void RITenable(){
-  ritflag |= RIT_ON;
+  state.rit = 1;
   RITtemp = OPfreq;
   RITdisplay();
 }
 
 void RIText() {
-
-  ritflag &= DIT_LC;
+  state.rit = 0;
   OPfreq = RITtemp;
   PLLwrite();
   displayfreq();
@@ -669,9 +668,7 @@ void PLLwrite() {
   else {(VFOfreq = IFfreq + OPfreq);}
   si5351.set_freq(VFOfreq, 0ULL, SI5351_CLK0);
 
-  if (ritflag == 0) {TXfreq = OPfreq;}
-  else {TXfreq = RITtemp;}
-
+  TXfreq = state.rit ? RITtemp : OPfreq;
 }
 
 /*
@@ -784,7 +781,7 @@ void send_memory0() {
     ++Eadr;
   }
   int_morseOut();
-  if ((ritflag & RIT_ON) == 1){RITdisplay();}
+  if (state.rit){RITdisplay();}
   else displayfreq();
 }
 
@@ -797,7 +794,7 @@ void send_memory1() {
     ++Eadr;
   }
   int_morseOut();
-  if ((ritflag & RIT_ON) == 1){RITdisplay();}
+  if (state.rit){RITdisplay();}
   else displayfreq();
 }
 
