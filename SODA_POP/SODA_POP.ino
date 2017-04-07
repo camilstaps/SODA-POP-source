@@ -197,6 +197,7 @@ struct key_state {
   byte speed:5;
   byte dit_time;
   unsigned int dash_time;
+  unsigned int timer;
 };
 
 struct state {
@@ -220,8 +221,6 @@ struct state state;
 byte        codespeedflag = 0;
 byte        sidtoneflag   = 0;
 byte        memoryflag = 0;
-int         ktimer = 0;
-int         ktimer2 = 0;
 byte        code=0x01;
 long        myMdata[64];
 unsigned long tcount;
@@ -290,7 +289,6 @@ void setup() {
   TIMSK1 |= (1 << OCIE1A);
   interrupts();
   loadWPM(state.key.speed);                 // Fix speed at 20 WPM
-  ktimer2 = state.key.dit_time;
 
   delay(100); //let things settle down a bit
 
@@ -619,8 +617,8 @@ void TIMER1_SERVICE_ROUTINE()
 {
   ++tcount;
 
-  if (++ktimer > ktimer2)
-    state.key.timeout = 1;
+  if (state.key.timer > 0 && --state.key.timer == 0)
+      state.key.timeout = 1;
 
   digitalWrite(SLED1, HIGH);
   digitalWrite(SLED2, HIGH);
@@ -836,8 +834,7 @@ void inkeyer() {
 
   si5351.set_freq(TX_FREQ, 0ULL, SI5351_CLK1);
 
-  ktimer2 = state.key.dash_time*2;
-  ktimer = 0;
+  state.key.timer = state.key.dash_time * 2;
   state.key.timeout = 0;
   do {
     if (digitalRead(DASHin) == LOW) {dash();} // dash
@@ -853,8 +850,7 @@ void inkeyer() {
   myMdata[LOC] = code;
 
 
-  ktimer2 = state.key.dash_time*2;
-  ktimer = 0;
+  state.key.timer = state.key.dash_time * 2;
   state.key.timeout = 0;
 
   do {
@@ -879,8 +875,7 @@ void dash()
   code = (code << 1) | 0x01;
   tone(A2, 600);
   state.key.dash = 0;
-  ktimer2 = state.key.dash_time;
-  ktimer =0;
+  state.key.timer = state.key.dash_time;
   state.key.timeout = 0;
   do
     update_Dot_Latch();
@@ -889,8 +884,7 @@ void dash()
   digitalWrite(TXEN, LOW);
   noTone(A2);
 
-  ktimer2 = state.key.dit_time;
-  ktimer = 0;
+  state.key.timer = state.key.dit_time;
   state.key.timeout = 0;
 
   do
@@ -904,9 +898,8 @@ void dot()
     digitalWrite(TXEN, HIGH);
   code <<= 1;
   tone(A2, 600);
-  ktimer2 = state.key.dit_time;
   state.key.dit = 0;
-  ktimer = 0;
+  state.key.timer = state.key.dit_time;
   state.key.timeout = 0;
   do
     update_Dash_Latch();
@@ -914,8 +907,7 @@ void dot()
 
   digitalWrite(TXEN, LOW);
   noTone(A2);
-  ktimer2 = state.key.dit_time;
-  ktimer = 0;
+  state.key.timer = state.key.dit_time;
   state.key.timeout = 0;
 
   do
