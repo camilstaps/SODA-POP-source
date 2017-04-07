@@ -144,10 +144,14 @@ struct key_state {
 
 struct state {
   struct key_state key;
+
+  unsigned long rit_tx_freq;
   byte rit:1;
 };
 
 struct state state;
+
+#define TX_FREQ (state.rit ? state.rit_tx_freq : OPfreq)
 
 // register names
 byte        codespeedflag = 0;
@@ -199,10 +203,7 @@ volatile int d = HIGH;        // make data val low
 unsigned long   frequency;
 unsigned long   freq_result;
 unsigned long   VFOfreq;
-unsigned long   TXfreq;
 unsigned long   OPfreq;
-unsigned long   RITtemp;
-unsigned long   RITresult;
 unsigned long   time1;
 unsigned long   time0;
 unsigned long   temp ;
@@ -506,38 +507,33 @@ void RIT() {
 
 void RITenable(){
   state.rit = 1;
-  RITtemp = OPfreq;
+  state.rit_tx_freq = OPfreq;
   RITdisplay();
 }
 
 void RIText() {
   state.rit = 0;
-  OPfreq = RITtemp;
+  OPfreq = state.rit_tx_freq;
   PLLwrite();
   displayfreq();
 }
 
-void RITdisplay() {
-  if (RITtemp >= OPfreq)
-  {
-    RITresult = RITtemp - OPfreq;
+void RITdisplay()
+{
+  if (state.rit_tx_freq > OPfreq) {
+    frequency = state.rit_tx_freq - OPfreq;
     digit3 = LED_neg;
-  }
-  else
-  {
-    RITresult = OPfreq - RITtemp;
+  } else {
+    frequency = OPfreq - state.rit_tx_freq;
     digit3 = 0x00;
   }
 
   digit4 = LED_r;
-  frequency = RITresult;
-  frequency = frequency/100;
-  freq_result = frequency%10000;
-  freq_result = freq_result/1000;
+  frequency /= 100;
+  freq_result = (frequency % 10000) / 1000;
   hex2seg();
   digit2 = digitX;
-  freq_result = frequency%1000;
-  freq_result = freq_result/100;
+  freq_result = (frequency % 1000) / 100;
   hex2seg();
   digit1 = digitX;
 }
@@ -660,8 +656,6 @@ void PLLwrite() {
   if (OPfreq >=IFfreq) {(VFOfreq = OPfreq - IFfreq);} // test if IF is larger then operating freq
   else {(VFOfreq = IFfreq + OPfreq);}
   si5351.set_freq(VFOfreq, 0ULL, SI5351_CLK0);
-
-  TXfreq = state.rit ? RITtemp : OPfreq;
 }
 
 /*
@@ -809,7 +803,7 @@ void inkeyer() {
   Wire.write(0xfd);
   Wire.endTransmission();
 
-  si5351.set_freq(TXfreq, 0ULL, SI5351_CLK1);
+  si5351.set_freq(TX_FREQ, 0ULL, SI5351_CLK1);
 
   ktimer2 = state.key.dash_time*2;
   ktimer = 0;
@@ -930,7 +924,7 @@ void int_morseOut()
   Wire.write(REG+3);
   Wire.write(0xfd);
   Wire.endTransmission();
-  si5351.set_freq(TXfreq, 0ULL, SI5351_CLK1);
+  si5351.set_freq(TX_FREQ, 0ULL, SI5351_CLK1);
 
   memoryflag &= MEM_EN_CL;
   for (int LOC = 0; LOC < 64; LOC++)
@@ -994,7 +988,7 @@ void Straight_key(){
   Wire.write(0xfd);
   Wire.endTransmission();
 
-  si5351.set_freq(TXfreq, 0ULL, SI5351_CLK1);
+  si5351.set_freq(TX_FREQ, 0ULL, SI5351_CLK1);
   tone(A2, 600);
 
   digitalWrite(TXEN, HIGH);
