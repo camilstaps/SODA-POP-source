@@ -144,6 +144,8 @@ struct key_state {
   byte dit:1;
   byte dash:1;
   byte speed:5;
+  byte dit_time;
+  unsigned int dash_time;
 };
 
 struct state {
@@ -153,8 +155,6 @@ struct state {
 struct state state;
 
 // register names
-int         ditTime;                    // No. milliseconds per dit
-int         dashTime;
 byte        ritflag = 0;
 byte        codespeedflag = 0;
 byte        sidtoneflag   = 0;
@@ -264,7 +264,7 @@ void setup() {
   TIMSK1 |= (1 << OCIE1A);
   interrupts();
   loadWPM(20);                 // Fix speed at 20 WPM
-  ktimer2 = ditTime;
+  ktimer2 = state.key.dit_time;
 
   delay(100); //let things settle down a bit
 
@@ -701,7 +701,7 @@ void store_mem(){
 
   for (int LOC = 0; LOC < 64; LOC++)
   {code = myMdata[LOC];
-    if (code == 0x00) {delay(ditTime);}
+    if (code == 0x00) {delay(state.key.dit_time);}
     if (code != 0xff) {morseOut();}
   }
   select_loc();
@@ -821,7 +821,7 @@ void inkeyer() {
 
   si5351.set_freq(TXfreq, 0ULL, SI5351_CLK1);
 
-  ktimer2 = dashTime*2;
+  ktimer2 = state.key.dash_time*2;
   ktimer = 0;
   state.key.timeout = 0;
   do {
@@ -838,7 +838,7 @@ void inkeyer() {
   myMdata[LOC] = code;
 
 
-  ktimer2 = dashTime*2;
+  ktimer2 = state.key.dash_time*2;
   ktimer = 0;
   state.key.timeout = 0;
 
@@ -864,7 +864,7 @@ void dash()
   code = (code << 1) | bit0set;
   tone(A2, 600);
   state.key.dash = 0;
-  ktimer2 = dashTime;
+  ktimer2 = state.key.dash_time;
   ktimer =0;
   state.key.timeout = 0;
   do
@@ -874,7 +874,7 @@ void dash()
   digitalWrite(TXEN, LOW);
   noTone(A2);
 
-  ktimer2 = ditTime;
+  ktimer2 = state.key.dit_time;
   ktimer = 0;
   state.key.timeout = 0;
 
@@ -889,7 +889,7 @@ void dot()
     digitalWrite(TXEN, HIGH);
   code <<= 1;
   tone(A2, 600);
-  ktimer2 = ditTime;
+  ktimer2 = state.key.dit_time;
   state.key.dit = 0;
   ktimer = 0;
   state.key.timeout = 0;
@@ -899,7 +899,7 @@ void dot()
 
   digitalWrite(TXEN, LOW);
   noTone(A2);
-  ktimer2 = ditTime;
+  ktimer2 = state.key.dit_time;
   ktimer = 0;
   state.key.timeout = 0;
 
@@ -945,7 +945,7 @@ void int_morseOut()
   memoryflag &= MEM_EN_CL;
   for (int LOC = 0; LOC < 64; LOC++)
   {code = myMdata[LOC];
-    if (code == 0x00) {delay(ditTime);}
+    if (code == 0x00) {delay(state.key.dit_time);}
     if (code != 0xff) {morseOut();}
   }
 
@@ -970,30 +970,30 @@ void morseOut() {
     else
       dit();
   }
-  delay(dashTime);
+  delay(state.key.dash_time);
 }
 
 void  dah(){
   if (bitRead(memoryflag,7) != 1) { digitalWrite(TXEN, HIGH);}
   tone(A2, 600);
-  delay(dashTime);
+  delay(state.key.dash_time);
   digitalWrite(TXEN, LOW);
   noTone(A2);
-  delay(ditTime);
+  delay(state.key.dit_time);
 }
 
 void  dit() {
   if (bitRead(memoryflag,7) != 1) { digitalWrite(TXEN, HIGH);}
   tone(A2, 600);
-  delay(ditTime);
+  delay(state.key.dit_time);
   digitalWrite(TXEN, LOW);
   noTone(A2);
-  delay(ditTime);
+  delay(state.key.dit_time);
 }
 
 void loadWPM(int wpm){
-  ditTime = 1200/wpm;
-  dashTime = ditTime*3;
+  state.key.dit_time = 1200/wpm;
+  state.key.dash_time = state.key.dit_time*3;
 }
 
 
