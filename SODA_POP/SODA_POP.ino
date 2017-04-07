@@ -203,9 +203,6 @@ volatile int cLast = HIGH;    // init last val the same, low
 volatile int d = HIGH;        // make data val low
 
 
-unsigned long   frequency;
-unsigned long   freq_result;
-unsigned long   VFOfreq;
 unsigned long   time1;
 unsigned long   time0;
 unsigned long   temp ;
@@ -521,18 +518,20 @@ void RIText() {
 
 void RITdisplay()
 {
+  unsigned long offset;
+
   if (state.rit_tx_freq > state.op_freq) {
-    frequency = state.rit_tx_freq - state.op_freq;
+    offset = state.rit_tx_freq - state.op_freq;
     digit3 = LED_neg;
   } else {
-    frequency = state.op_freq - state.rit_tx_freq;
+    offset = state.op_freq - state.rit_tx_freq;
     digit3 = 0x00;
   }
 
   digit4 = LED_r;
-  frequency /= 100;
-  digit2 = LED_DIGITS[(frequency % 10000) / 1000];
-  digit1 = LED_DIGITS[(frequency % 1000) / 100];
+  offset /= 100;
+  digit2 = LED_DIGITS[(offset % 10000) / 1000];
+  digit1 = LED_DIGITS[(offset % 1000) / 100];
 }
 
 ////////////////////////////////////////////////
@@ -540,8 +539,10 @@ void RITdisplay()
 //hex value into the LED 7 seg map.
 ///////////////////////////////////////////////
 
-void displayfreq(){
-  frequency = state.op_freq/100;       //first divide by 100 to remove the fractional Hz digits
+void displayfreq() {
+  // First divide by 100 to remove the fractional Hz digits
+  unsigned long frequency = state.op_freq/100;
+  // Then display the digits one by one
   digit4 = LED_DIGITS[(frequency % 1000000) / 100000];
   digit3 = LED_DIGITS[(frequency % 100000) / 10000];
   digit2 = LED_DIGITS[(frequency % 10000) / 1000];
@@ -624,10 +625,9 @@ void encoder() {
  */
 
 void PLLwrite() {
-  VFOfreq = state.op_freq >= IFfreq
-    ? state.op_freq - IFfreq
-    : state.op_freq + IFfreq;
-  si5351.set_freq(VFOfreq, 0ULL, SI5351_CLK0);
+  si5351.set_freq(
+      state.op_freq >= IFfreq ? state.op_freq - IFfreq: state.op_freq + IFfreq,
+      0ULL, SI5351_CLK0);
 }
 
 /*
