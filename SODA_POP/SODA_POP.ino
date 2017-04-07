@@ -115,18 +115,12 @@ Si5351 si5351;
 
 //flag definitions
 
-#define     DIT_L     B00000001    //dit latch
-#define     DAH_L     B00000001    //dash latch
-#define     RIT_ON    B00000001    //rit flag
 #define     CSflag    B00000001
 #define     bit0set   0X01
 #define     bit0cl    0xfe
 #define     SK_EN     0x10
 #define     MEM_EN    0x80
 #define     MEM_EN_CL 0x7f
-#define     DIT_LC    0xfe
-#define     TimeOutC  0xf7
-#define     TimeOut   0x08
 #define     UPflag    0x01
 #define     DWNflag   0x02
 
@@ -161,10 +155,7 @@ byte        sidtoneflag   = 0;
 byte        memoryflag = 0;
 int         ktimer = 0;
 int         ktimer2 = 0;
-byte        letterTime;
-byte        wordTime;
 byte        code=0x01;
-byte        spaceTime;
 long        myMdata[64];
 unsigned long tcount;
 long        duration=0;
@@ -174,7 +165,6 @@ int         Eadr;
 
 byte      BANDpointer = 1;
 byte      EncoderFlag = 0;
-byte      wpm =20;
 byte      sw_inputs ;
 byte      digit1 = 0;
 byte      digit2 = 0;
@@ -263,7 +253,7 @@ void setup() {
   TCCR1B = 0x0b;
   TIMSK1 |= (1 << OCIE1A);
   interrupts();
-  loadWPM(20);                 // Fix speed at 20 WPM
+  loadWPM(state.key.speed);                 // Fix speed at 20 WPM
   ktimer2 = state.key.dit_time;
 
   delay(100); //let things settle down a bit
@@ -462,7 +452,7 @@ void CodeSpeed(){
 
 //clear code speed adjust mode
 void adjCSoff() {
-  codespeedflag &= DIT_LC;
+  codespeedflag = 0x00;
   displayfreq();
 
   do {delay(100);}
@@ -478,24 +468,27 @@ void CS_Pinput() {
 
 
 void CS_up() {
-  if (wpm == 30){return;}
-  else wpm = wpm + 1;
+  if (state.key.speed >= 30)
+    return;
+  else
+    state.key.speed++;
   wr_CS();
 }
 
 void  CS_dwn() {
-  if (wpm == 5) {return;}
-  else  wpm = wpm-1;
+  if (state.key.speed <= 5)
+    return;
+  else
+    state.key.speed--;
   wr_CS();
 }
 
 void wr_CS() {
-  loadWPM(wpm);
-  freq_result = wpm;
-  freq_result = freq_result%10;
+  loadWPM(state.key.speed);
+  freq_result = state.key.speed % 10;
   hex2seg();
   digit1 = digitX;
-  freq_result = wpm/10;
+  freq_result = state.key.speed / 10;
   hex2seg();
   digit2 = digitX;
 }
@@ -970,7 +963,7 @@ void morseOut() {
   delay(state.key.dash_time);
 }
 
-void  dah(){
+void dah() {
   if (bitRead(memoryflag,7) != 1) { digitalWrite(TXEN, HIGH);}
   tone(A2, 600);
   delay(state.key.dash_time);
@@ -979,7 +972,7 @@ void  dah(){
   delay(state.key.dit_time);
 }
 
-void  dit() {
+void dit() {
   if (bitRead(memoryflag,7) != 1) { digitalWrite(TXEN, HIGH);}
   tone(A2, 600);
   delay(state.key.dit_time);
@@ -988,8 +981,8 @@ void  dit() {
   delay(state.key.dit_time);
 }
 
-void loadWPM(int wpm){
-  state.key.dit_time = 1200/wpm;
+void loadWPM (byte wpm) {
+  state.key.dit_time = 1200u / ((unsigned int) wpm);
   state.key.dash_time = state.key.dit_time*3;
 }
 
