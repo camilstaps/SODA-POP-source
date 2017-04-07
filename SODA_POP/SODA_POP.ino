@@ -139,15 +139,15 @@ Si5351 si5351;
 #define KEY_STRAIGHT 1
 
 struct key_state {
-	byte mode:1;
-	byte timeout:1;
-	byte dit:1;
-	byte dash:1;
-	byte speed:5;
+  byte mode:1;
+  byte timeout:1;
+  byte dit:1;
+  byte dash:1;
+  byte speed:5;
 };
 
 struct state {
-	struct key_state key;
+  struct key_state key;
 };
 
 struct state global_state;
@@ -232,220 +232,220 @@ unsigned long  high_band_limit; //high limit, band tuning
 ISR (TIMER1_COMPA_vect) {TIMER1_SERVICE_ROUTINE();}
 
 void setup() {
-	global_state.key.mode = KEY_IAMBIC;
-	global_state.key.speed = 20;
-	global_state.key.timeout = 1;
-	global_state.key.dash = 0;
-	global_state.key.dit = 0;
+  global_state.key.mode = KEY_IAMBIC;
+  global_state.key.speed = 20;
+  global_state.key.timeout = 1;
+  global_state.key.dash = 0;
+  global_state.key.dit = 0;
 
-	//switch inputs
-	DDRB = 0x3f;
-	DDRD = 0Xff;
+  //switch inputs
+  DDRB = 0x3f;
+  DDRD = 0Xff;
 
-	pinMode(A0, INPUT_PULLUP);
-	pinMode(A2, OUTPUT);
-	pinMode(A1, INPUT_PULLUP);
-	pinMode(A3, OUTPUT);
+  pinMode(A0, INPUT_PULLUP);
+  pinMode(A2, OUTPUT);
+  pinMode(A1, INPUT_PULLUP);
+  pinMode(A3, OUTPUT);
 
-	digitalWrite(MUTE, HIGH);
-	digitalWrite(TXEN, LOW);
-	si5351.init(SI5351_CRYSTAL_LOAD_6PF, 0); //set PLL xtal load
-	Wire.beginTransmission(0x60); //turn off the Tx output, which gets turned on when the chip is updated
-	Wire.write(REG+3);
-	Wire.write(0xfe);
-	Wire.endTransmission();
+  digitalWrite(MUTE, HIGH);
+  digitalWrite(TXEN, LOW);
+  si5351.init(SI5351_CRYSTAL_LOAD_6PF, 0); //set PLL xtal load
+  Wire.beginTransmission(0x60); //turn off the Tx output, which gets turned on when the chip is updated
+  Wire.write(REG+3);
+  Wire.write(0xfe);
+  Wire.endTransmission();
 
-	noInterrupts();
-	TCCR1A = 0;
-	TCCR1B = 0;
-	TCNT1 = 0;
+  noInterrupts();
+  TCCR1A = 0;
+  TCCR1B = 0;
+  TCNT1 = 0;
 
-	OCR1A = 238;
-	TCCR1B = 0x0b;
-	TIMSK1 |= (1 << OCIE1A);
-	interrupts();
-	loadWPM(20);                 // Fix speed at 20 WPM
-	ktimer2 = ditTime;
+  OCR1A = 238;
+  TCCR1B = 0x0b;
+  TIMSK1 |= (1 << OCIE1A);
+  interrupts();
+  loadWPM(20);                 // Fix speed at 20 WPM
+  ktimer2 = ditTime;
 
-	delay(100); //let things settle down a bit
+  delay(100); //let things settle down a bit
 
-	BANDpointer = EEPROM.read(6); // check for operating band
-	if (BANDpointer == 0xff) {BANDpointer = 1; calibration();}
+  BANDpointer = EEPROM.read(6); // check for operating band
+  if (BANDpointer == 0xff) {BANDpointer = 1; calibration();}
 
-	cal_data();    //load calibration data
-	si5351.set_correction(cal_value); //correct the clock chip error
-	stepK = Fstep50 ; //default tuning rate
-	stepSize = 2;
-	digit4 = LED_N_6;
-	digit3 = LED_n;
-	get_band();
-	delay(1000);
-	displayfreq();
-	PLLwrite();
-	digitalWrite(MUTE, LOW);
+  cal_data();    //load calibration data
+  si5351.set_correction(cal_value); //correct the clock chip error
+  stepK = Fstep50 ; //default tuning rate
+  stepSize = 2;
+  digit4 = LED_N_6;
+  digit3 = LED_n;
+  get_band();
+  delay(1000);
+  displayfreq();
+  PLLwrite();
+  digitalWrite(MUTE, LOW);
 
-	if (digitalRead(DASHin) == LOW)
-		global_state.key.mode = KEY_STRAIGHT;
+  if (digitalRead(DASHin) == LOW)
+    global_state.key.mode = KEY_STRAIGHT;
 }
 
 void loop() {
-	// test for switch closed
-	if (global_state.key.mode == KEY_IAMBIC)
-		iambic();
-	else if (digitalRead(DOTin) == LOW)
-		Straight_key();
+  // test for switch closed
+  if (global_state.key.mode == KEY_IAMBIC)
+    iambic();
+  else if (digitalRead(DOTin) == LOW)
+    Straight_key();
 
-	state = bitRead(sw_inputs,E_sw);   //read change tuning step switch
-	if (state == LOW) {nextFstep();} // debounce, wait for switch release
-	while (state == LOW) {
-		delay(10) ;
-		state = bitRead(sw_inputs,E_sw);
-	}
+  state = bitRead(sw_inputs,E_sw);   //read change tuning step switch
+  if (state == LOW) {nextFstep();} // debounce, wait for switch release
+  while (state == LOW) {
+    delay(10) ;
+    state = bitRead(sw_inputs,E_sw);
+  }
 
-	state = bitRead(sw_inputs,R_sw);   //read RIT switch
-	if (state == LOW) {timeRIT();}  //debounce, wait for switch release
-	while (state == LOW) {
-		delay(10) ;
-		state = bitRead(sw_inputs,R_sw);
-	}
+  state = bitRead(sw_inputs,R_sw);   //read RIT switch
+  if (state == LOW) {timeRIT();}  //debounce, wait for switch release
+  while (state == LOW) {
+    delay(10) ;
+    state = bitRead(sw_inputs,R_sw);
+  }
 
-	if  (bitRead(sw_inputs,K_sw) == LOW){keyer_mode();}
+  if  (bitRead(sw_inputs,K_sw) == LOW){keyer_mode();}
 
-	if (EncoderFlag == 2) {Tune_UP();} //test tune up flag
-	if (EncoderFlag == 1) {Tune_DWN();} //test tunr down flag
+  if (EncoderFlag == 2) {Tune_UP();} //test tune up flag
+  if (EncoderFlag == 1) {Tune_DWN();} //test tunr down flag
 }
 //**************************************************************
 //end of switch polling loop
 //**************************************************************
 
 void keyer_mode() {
-	if (codespeedflag & CSflag == 1) {adjCSoff();}
-	if (bitRead(memoryflag,7) != 0) {store_mem();}
-	else timebutton();
+  if (codespeedflag & CSflag == 1) {adjCSoff();}
+  if (bitRead(memoryflag,7) != 0) {store_mem();}
+  else timebutton();
 }
 
 void timeRIT(){
-	if  (bitRead(memoryflag,7) !=0) {  //this exits memory entry mode
-		memoryflag &= MEM_EN_CL;
-		displayfreq();
-		digitalWrite(MUTE, LOW);
-		do {delay(100);}
-		while (bitRead(sw_inputs,R_sw) !=1);
-	}
+  if  (bitRead(memoryflag,7) !=0) {  //this exits memory entry mode
+    memoryflag &= MEM_EN_CL;
+    displayfreq();
+    digitalWrite(MUTE, LOW);
+    do {delay(100);}
+    while (bitRead(sw_inputs,R_sw) !=1);
+  }
 
-	duration = 0;
-	time0 = tcount;
-	do {time1 = tcount; duration = time1- time0; //calculate how long the button has been pushed
-		//if (duration > 2000)   {digit4 = LED_N_6; digit3 = LED_n; digit2 = 0x00; digit1 = 0x00;}
-		if (duration >5000) {digit4 = LED_C; digit3 = LED_A; digit2 = LED_L; digit1 = 0x00;}
-		//if (duration >8000) {digit4 = LED_E; digit2 = LED_r; digit2 = LED_A; digit1 = LED_N_5;}
-		delay(1); }
-	while (bitRead(sw_inputs,R_sw) !=1);
-	duration = time1 - time0;
+  duration = 0;
+  time0 = tcount;
+  do {time1 = tcount; duration = time1- time0; //calculate how long the button has been pushed
+    //if (duration > 2000)   {digit4 = LED_N_6; digit3 = LED_n; digit2 = 0x00; digit1 = 0x00;}
+    if (duration >5000) {digit4 = LED_C; digit3 = LED_A; digit2 = LED_L; digit1 = 0x00;}
+    //if (duration >8000) {digit4 = LED_E; digit2 = LED_r; digit2 = LED_A; digit1 = LED_N_5;}
+    delay(1); }
+  while (bitRead(sw_inputs,R_sw) !=1);
+  duration = time1 - time0;
 
-	//  if (duration > 8000) {ee_erase(); duration =0;}
-	if (duration >5000) {calibration(); duration = 0;}
-	if (duration >2000) {changeBand(); duration = 0;}
-	if (duration > 50) {RIT(); duration = 0;}
+  //  if (duration > 8000) {ee_erase(); duration =0;}
+  if (duration >5000) {calibration(); duration = 0;}
+  if (duration >2000) {changeBand(); duration = 0;}
+  if (duration > 50) {RIT(); duration = 0;}
 }
 
 void timebutton() {
 
-	duration = 0;  //clear button duration counter
-	time0 = tcount; //set basetime to current counter value
+  duration = 0;  //clear button duration counter
+  time0 = tcount; //set basetime to current counter value
 
-	do {time1 = tcount; duration = time1- time0; //calculate how long the button has been pushed
-		if (duration > 50)   {digit4 = LED_N_5; digit3 = LED_E; digit2 = LED_n; digit1 = LED_d;} //short push message
-		if (duration > 500) {digit4 = LED_C; digit3 = LED_N_5; digit2 = 0x00; digit1 = 0x00;} //1 second push message
-		if (duration > 2000) {;digit4=LED_E; digit3 =LED_n; digit2 = LED_t; digit1 = LED_r;}  //2 second push message
-		delay(1); //for some reason a delay call has to be done when doing bit read flag tests or it locks up
-		//this doesn't seem to be a problem when doing digital reads of a port pin instead.
-	}
+  do {time1 = tcount; duration = time1- time0; //calculate how long the button has been pushed
+    if (duration > 50)   {digit4 = LED_N_5; digit3 = LED_E; digit2 = LED_n; digit1 = LED_d;} //short push message
+    if (duration > 500) {digit4 = LED_C; digit3 = LED_N_5; digit2 = 0x00; digit1 = 0x00;} //1 second push message
+    if (duration > 2000) {;digit4=LED_E; digit3 =LED_n; digit2 = LED_t; digit1 = LED_r;}  //2 second push message
+    delay(1); //for some reason a delay call has to be done when doing bit read flag tests or it locks up
+    //this doesn't seem to be a problem when doing digital reads of a port pin instead.
+  }
 
-	while (bitRead(sw_inputs,K_sw) == 0); // wait until the bit goes high.
+  while (bitRead(sw_inputs,K_sw) == 0); // wait until the bit goes high.
 
-	duration = time1- time0; //the duration result isn't saved when exiting the do/while loop, so has to be calculated again
-	if (duration >2000) {start_memory(); duration = 0;} //test duration to jump to desired function
-	if (duration >500){CodeSpeed(); duration = 0;}
-	if (duration >50){int_memory_send(); duration = 0;}
+  duration = time1- time0; //the duration result isn't saved when exiting the do/while loop, so has to be calculated again
+  if (duration >2000) {start_memory(); duration = 0;} //test duration to jump to desired function
+  if (duration >500){CodeSpeed(); duration = 0;}
+  if (duration >50){int_memory_send(); duration = 0;}
 }
 
 //test for keyer mode, send message or store message
 void mode_test(){
-	if (bitRead(memoryflag,7) != 0) {store_mem();}
-	int_memory_send();
+  if (bitRead(memoryflag,7) != 0) {store_mem();}
+  int_memory_send();
 }
 
 
 void iambic(){
-	if (digitalRead(DASHin) == LOW) {Ptest();}
-	if (digitalRead(DOTin) == LOW)  {Ptest();}
+  if (digitalRead(DASHin) == LOW) {Ptest();}
+  if (digitalRead(DOTin) == LOW)  {Ptest();}
 }
 
 //test if paddle used for keying or code speed adj
 void Ptest() {
-	if (codespeedflag &= CSflag == 1) {CS_Pinput();}
-	else keyer();
+  if (codespeedflag &= CSflag == 1) {CS_Pinput();}
+  else keyer();
 }
 
 //frequency or code speed adjust test
 
 void  Tune_UP() {
-	EncoderFlag = 0;
-	if (codespeedflag &= CSflag == 1) {CS_up();}
-	else FREQ_incerment();
+  EncoderFlag = 0;
+  if (codespeedflag &= CSflag == 1) {CS_up();}
+  else FREQ_incerment();
 }
 
 void Tune_DWN() {
-	EncoderFlag = 0;
-	if (codespeedflag &= CSflag == 1) {CS_dwn();}
-	else FREQ_decerment();
+  EncoderFlag = 0;
+  if (codespeedflag &= CSflag == 1) {CS_dwn();}
+  else FREQ_decerment();
 }
 
 
 // adjust the operating frequency
 void FREQ_incerment() {
 
-	OPfreq  = OPfreq + stepK;  //add frequenc tuning step to frequency word
-	if (OPfreq > high_band_limit) {FREQ_decerment();} //band tuning limits
-	if (ritflag &= RIT_ON == 1){RITdisplay();} //test for RIT mode
-	else  displayfreq();
-	PLLwrite();
+  OPfreq  = OPfreq + stepK;  //add frequenc tuning step to frequency word
+  if (OPfreq > high_band_limit) {FREQ_decerment();} //band tuning limits
+  if (ritflag &= RIT_ON == 1){RITdisplay();} //test for RIT mode
+  else  displayfreq();
+  PLLwrite();
 }
 
 void FREQ_decerment() {
 
-	OPfreq  = OPfreq - stepK;
+  OPfreq  = OPfreq - stepK;
 
-	if (OPfreq < low_band_limit) {FREQ_incerment();}
-	if (ritflag &= RIT_ON == 1){RITdisplay();}
-	else  displayfreq();
-	PLLwrite();
+  if (OPfreq < low_band_limit) {FREQ_incerment();}
+  if (ritflag &= RIT_ON == 1){RITdisplay();}
+  else  displayfreq();
+  PLLwrite();
 }
 
 
 //toggle tuning step rate
 void  nextFstep () {
 
-	++ stepSize ;
-	if (stepSize == 3) {(stepSize = 1);}
+  ++ stepSize ;
+  if (stepSize == 3) {(stepSize = 1);}
 
-	switch(stepSize) {
-		case 1:
-			stepK = Fstep200;
-			d1temp = digit1;
-			digit1 = 0x00;
-			delay(100);
-			digit1 = d1temp;
-			break;
-		case 2:
-			stepK = Fstep50;
-			d1temp = digit1;
-			digit1 = 0x00;
-			delay(100);
-			digit1 = d1temp;
-			break;
-	}
+  switch(stepSize) {
+    case 1:
+      stepK = Fstep200;
+      d1temp = digit1;
+      digit1 = 0x00;
+      delay(100);
+      digit1 = d1temp;
+      break;
+    case 2:
+      stepK = Fstep50;
+      d1temp = digit1;
+      digit1 = 0x00;
+      delay(100);
+      digit1 = d1temp;
+      break;
+  }
 }
 
 
@@ -454,49 +454,49 @@ void  nextFstep () {
  */
 
 void CodeSpeed(){
-	codespeedflag |= CSflag;
-	wr_CS();
+  codespeedflag |= CSflag;
+  wr_CS();
 }
 
 
 //clear code speed adjust mode
 void adjCSoff() {
-	codespeedflag &= DIT_LC;
-	displayfreq();
+  codespeedflag &= DIT_LC;
+  displayfreq();
 
-	do {delay(100);}
-	while (bitRead(sw_inputs,K_sw)== LOW);
+  do {delay(100);}
+  while (bitRead(sw_inputs,K_sw)== LOW);
 }
 
 //change code speed with paddle
 void CS_Pinput() {
-	if (digitalRead(DASHin) == LOW) {CS_up();}
-	if (digitalRead(DOTin) == LOW)  {CS_dwn();}
-	delay(200);
+  if (digitalRead(DASHin) == LOW) {CS_up();}
+  if (digitalRead(DOTin) == LOW)  {CS_dwn();}
+  delay(200);
 }
 
 
 void CS_up() {
-	if (wpm == 30){return;}
-	else wpm = wpm + 1;
-	wr_CS();
+  if (wpm == 30){return;}
+  else wpm = wpm + 1;
+  wr_CS();
 }
 
 void  CS_dwn() {
-	if (wpm == 5) {return;}
-	else  wpm = wpm-1;
-	wr_CS();
+  if (wpm == 5) {return;}
+  else  wpm = wpm-1;
+  wr_CS();
 }
 
 void wr_CS() {
-	loadWPM(wpm);
-	freq_result = wpm;
-	freq_result = freq_result%10;
-	hex2seg();
-	digit1 = digitX;
-	freq_result = wpm/10;
-	hex2seg();
-	digit2 = digitX;
+  loadWPM(wpm);
+  freq_result = wpm;
+  freq_result = freq_result%10;
+  hex2seg();
+  digit1 = digitX;
+  freq_result = wpm/10;
+  hex2seg();
+  digit2 = digitX;
 }
 
 
@@ -507,47 +507,47 @@ void wr_CS() {
 
 void RIT() {
 
-	if (ritflag & RIT_ON == 1){RIText();}
-	else RITenable();
+  if (ritflag & RIT_ON == 1){RIText();}
+  else RITenable();
 }
 
 void RITenable(){
-	ritflag |= RIT_ON;
-	RITtemp = OPfreq;
-	RITdisplay();
+  ritflag |= RIT_ON;
+  RITtemp = OPfreq;
+  RITdisplay();
 }
 
 void RIText() {
 
-	ritflag &= DIT_LC;
-	OPfreq = RITtemp;
-	PLLwrite();
-	displayfreq();
+  ritflag &= DIT_LC;
+  OPfreq = RITtemp;
+  PLLwrite();
+  displayfreq();
 }
 
 void RITdisplay() {
-	if (RITtemp >= OPfreq)
-	{
-		RITresult = RITtemp - OPfreq;
-		digit3 = LED_neg;
-	}
-	else
-	{
-		RITresult = OPfreq - RITtemp;
-		digit3 = 0x00;
-	}
+  if (RITtemp >= OPfreq)
+  {
+    RITresult = RITtemp - OPfreq;
+    digit3 = LED_neg;
+  }
+  else
+  {
+    RITresult = OPfreq - RITtemp;
+    digit3 = 0x00;
+  }
 
-	digit4 = LED_r;
-	frequency = RITresult;
-	frequency = frequency/100;
-	freq_result = frequency%10000;
-	freq_result = freq_result/1000;
-	hex2seg();
-	digit2 = digitX;
-	freq_result = frequency%1000;
-	freq_result = freq_result/100;
-	hex2seg();
-	digit1 = digitX;
+  digit4 = LED_r;
+  frequency = RITresult;
+  frequency = frequency/100;
+  freq_result = frequency%10000;
+  freq_result = freq_result/1000;
+  hex2seg();
+  digit2 = digitX;
+  freq_result = frequency%1000;
+  freq_result = freq_result/100;
+  hex2seg();
+  digit1 = digitX;
 }
 
 ////////////////////////////////////////////////
@@ -556,37 +556,37 @@ void RITdisplay() {
 ///////////////////////////////////////////////
 
 void displayfreq(){
-	frequency = OPfreq/100;            //first divide by 100 to remove the fractional Hz digits
-	freq_result = frequency%1000000;     //get the 100,000 kHz digit by first getting the remainder
-	freq_result = freq_result / 100000;  //divide the remainder by 100,000 to get the MSD
-	hex2seg();                           //convert the result to the 7 segment code
-	digit4 = digitX;                     //load the digit into the display memory for MSD
-	freq_result = frequency%100000;      //repeat the process for 10K, 1K and 100 Hz digits
-	freq_result = freq_result/10000;
-	hex2seg();
-	digit3 = digitX;
-	freq_result = frequency%10000;
-	freq_result = freq_result/1000;
-	hex2seg();
-	digit2 = digitX;
-	freq_result = frequency%1000;
-	freq_result = freq_result/100;
-	hex2seg();
-	digit1 = digitX;
+  frequency = OPfreq/100;            //first divide by 100 to remove the fractional Hz digits
+  freq_result = frequency%1000000;     //get the 100,000 kHz digit by first getting the remainder
+  freq_result = freq_result / 100000;  //divide the remainder by 100,000 to get the MSD
+  hex2seg();                           //convert the result to the 7 segment code
+  digit4 = digitX;                     //load the digit into the display memory for MSD
+  freq_result = frequency%100000;      //repeat the process for 10K, 1K and 100 Hz digits
+  freq_result = freq_result/10000;
+  hex2seg();
+  digit3 = digitX;
+  freq_result = frequency%10000;
+  freq_result = freq_result/1000;
+  hex2seg();
+  digit2 = digitX;
+  freq_result = frequency%1000;
+  freq_result = freq_result/100;
+  hex2seg();
+  digit1 = digitX;
 }
 
 void  hex2seg()
 {
-	if (freq_result == 0) {digitX = LED_N_0;} //this is the conversion table
-	if (freq_result == 1) {digitX = LED_N_1;}
-	if (freq_result == 2) {digitX = LED_N_2;}
-	if (freq_result == 3) {digitX = LED_N_3;}
-	if (freq_result == 4) {digitX = LED_N_4;}
-	if (freq_result == 5) {digitX = LED_N_5;}
-	if (freq_result == 6) {digitX = LED_N_6;}
-	if (freq_result == 7) {digitX = LED_N_7;}
-	if (freq_result == 8) {digitX = LED_N_8;}
-	if (freq_result == 9) {digitX = LED_N_9;}
+  if (freq_result == 0) {digitX = LED_N_0;} //this is the conversion table
+  if (freq_result == 1) {digitX = LED_N_1;}
+  if (freq_result == 2) {digitX = LED_N_2;}
+  if (freq_result == 3) {digitX = LED_N_3;}
+  if (freq_result == 4) {digitX = LED_N_4;}
+  if (freq_result == 5) {digitX = LED_N_5;}
+  if (freq_result == 6) {digitX = LED_N_6;}
+  if (freq_result == 7) {digitX = LED_N_7;}
+  if (freq_result == 8) {digitX = LED_N_8;}
+  if (freq_result == 9) {digitX = LED_N_9;}
 }
 
 /*
@@ -598,65 +598,65 @@ void  hex2seg()
 
 void TIMER1_SERVICE_ROUTINE()
 {
-	++tcount;
+  ++tcount;
 
-	if (++ktimer > ktimer2)
-		global_state.key.timeout = 1;
+  if (++ktimer > ktimer2)
+    global_state.key.timeout = 1;
 
-	digitalWrite(SLED1, HIGH);
-	digitalWrite(SLED2, HIGH);
-	digitalWrite(SLED3, HIGH);
-	digitalWrite(SLED4, HIGH);
+  digitalWrite(SLED1, HIGH);
+  digitalWrite(SLED2, HIGH);
+  digitalWrite(SLED3, HIGH);
+  digitalWrite(SLED4, HIGH);
 
-	DDRD = 0x00;
-	PORTD= 0Xff;
-	digitalWrite(8, LOW);
-	for (int i = 0; i < 10; i++) sw_inputs = PIND; // debounce
-	digitalWrite(8, HIGH);
-	c = bitRead(sw_inputs,1); //read encoder clock bit
-	if (c != cLast)
-		encoder(); //call if changed
-	DDRD = 0xff;
+  DDRD = 0x00;
+  PORTD= 0Xff;
+  digitalWrite(8, LOW);
+  for (int i = 0; i < 10; i++) sw_inputs = PIND; // debounce
+  digitalWrite(8, HIGH);
+  c = bitRead(sw_inputs,1); //read encoder clock bit
+  if (c != cLast)
+    encoder(); //call if changed
+  DDRD = 0xff;
 
-	digit_counter = (digit_counter + 1) % 4;
+  digit_counter = (digit_counter + 1) % 4;
 
-	switch(digit_counter) {
-		case 0:
-			PORTD = digit1;
-			digitalWrite(SLED1, LOW);
-			break;
+  switch(digit_counter) {
+    case 0:
+      PORTD = digit1;
+      digitalWrite(SLED1, LOW);
+      break;
 
-		case 1:
-			PORTD = digit2;
-			digitalWrite(SLED2, LOW);
-			digitalWrite(2, HIGH);
-			break;
+    case 1:
+      PORTD = digit2;
+      digitalWrite(SLED2, LOW);
+      digitalWrite(2, HIGH);
+      break;
 
-		case 2:
-			PORTD = digit3;
-			digitalWrite(SLED3, LOW);
-			break;
+    case 2:
+      PORTD = digit3;
+      digitalWrite(SLED3, LOW);
+      break;
 
-		case 3:
-			if (digit4 == 0xeb){digit4 = 0x00;}//blank MSD if 0
-			PORTD = digit4;
-			digitalWrite(SLED4, LOW);
-			break;
-	}
+    case 3:
+      if (digit4 == 0xeb){digit4 = 0x00;}//blank MSD if 0
+      PORTD = digit4;
+      digitalWrite(SLED4, LOW);
+      break;
+  }
 }
 
 /*
  * encoder, test for direction only on 0 to 1 clock state change
  */
 void encoder() {
-	if (cLast == 0){
-		d = bitRead(sw_inputs, 0);
-		if (d == LOW)
-			EncoderFlag = 2; //if low
-		else
-			EncoderFlag = 1; //if high
-	}
-	cLast = c; //store new state of clock
+  if (cLast == 0){
+    d = bitRead(sw_inputs, 0);
+    if (d == LOW)
+      EncoderFlag = 2; //if low
+    else
+      EncoderFlag = 1; //if high
+  }
+  cLast = c; //store new state of clock
 }
 
 
@@ -665,12 +665,12 @@ void encoder() {
  */
 
 void PLLwrite() {
-	if (OPfreq >=IFfreq) {(VFOfreq = OPfreq - IFfreq);} // test if IF is larger then operating freq
-	else {(VFOfreq = IFfreq + OPfreq);}
-	si5351.set_freq(VFOfreq, 0ULL, SI5351_CLK0);
+  if (OPfreq >=IFfreq) {(VFOfreq = OPfreq - IFfreq);} // test if IF is larger then operating freq
+  else {(VFOfreq = IFfreq + OPfreq);}
+  si5351.set_freq(VFOfreq, 0ULL, SI5351_CLK0);
 
-	if (ritflag == 0) {TXfreq = OPfreq;}
-	else {TXfreq = RITtemp;}
+  if (ritflag == 0) {TXfreq = OPfreq;}
+  else {TXfreq = RITtemp;}
 
 }
 
@@ -679,126 +679,126 @@ void PLLwrite() {
  */
 
 void start_memory() {
-	memoryflag |= MEM_EN ;
-	digitalWrite(MUTE, HIGH);
-	code  = ME;
-	morseOut();
-	code = MM;
-	morseOut();
-	clear_arry();
-	if (global_state.key.mode == KEY_STRAIGHT) {
-		memoryflag &= MEM_EN_CL;
-		displayfreq();
-	}
+  memoryflag |= MEM_EN ;
+  digitalWrite(MUTE, HIGH);
+  code  = ME;
+  morseOut();
+  code = MM;
+  morseOut();
+  clear_arry();
+  if (global_state.key.mode == KEY_STRAIGHT) {
+    memoryflag &= MEM_EN_CL;
+    displayfreq();
+  }
 }
 
 /*
  * store the entered message
  */
 void store_mem(){
-	--LOC;
-	myMdata[LOC] = 0xff;
+  --LOC;
+  myMdata[LOC] = 0xff;
 
-	for (int LOC = 0; LOC < 64; LOC++)
-	{code = myMdata[LOC];
-		if (code == 0x00) {delay(ditTime);}
-		if (code != 0xff) {morseOut();}
-	}
-	select_loc();
+  for (int LOC = 0; LOC < 64; LOC++)
+  {code = myMdata[LOC];
+    if (code == 0x00) {delay(ditTime);}
+    if (code != 0xff) {morseOut();}
+  }
+  select_loc();
 }
 
 void select_loc() {
 
-	do {
-		if (digitalRead(DASHin) == LOW) {store_memory0();}
-		if (digitalRead(DOTin) == LOW) {store_memory1();}
-		if  (bitRead(sw_inputs, K_sw) == LOW) {start_memory(); return;}
-	}
-	while (bitRead(memoryflag,7) !=0);
+  do {
+    if (digitalRead(DASHin) == LOW) {store_memory0();}
+    if (digitalRead(DOTin) == LOW) {store_memory1();}
+    if  (bitRead(sw_inputs, K_sw) == LOW) {start_memory(); return;}
+  }
+  while (bitRead(memoryflag,7) !=0);
 }
 
 void store_memory0(){
-	LOC=0;
-	int Eadr = 16;
-	for (int LOC = 0; LOC < 64; LOC++) {
-		code = myMdata[LOC];
-		EEPROM.write(Eadr, code);
-		++Eadr;
-	}
-	code = MM;
-	morseOut();
-	code = M2;
-	morseOut();
+  LOC=0;
+  int Eadr = 16;
+  for (int LOC = 0; LOC < 64; LOC++) {
+    code = myMdata[LOC];
+    EEPROM.write(Eadr, code);
+    ++Eadr;
+  }
+  code = MM;
+  morseOut();
+  code = M2;
+  morseOut();
 
-	memoryflag &= MEM_EN_CL;
-	displayfreq();
-	digitalWrite(MUTE, LOW);
+  memoryflag &= MEM_EN_CL;
+  displayfreq();
+  digitalWrite(MUTE, LOW);
 }
 
 void store_memory1(){
-	LOC =0;
-	int Eadr = 81;
-	for (int LOC = 0; LOC < 64; LOC++) {
-		code = myMdata[LOC];
-		EEPROM.write(Eadr, code);
-		++Eadr;
-	}
-	code  = MM;
-	morseOut();
-	code = M1;
-	morseOut();
-	memoryflag &= MEM_EN_CL;
-	displayfreq();
-	digitalWrite(MUTE, LOW);
+  LOC =0;
+  int Eadr = 81;
+  for (int LOC = 0; LOC < 64; LOC++) {
+    code = myMdata[LOC];
+    EEPROM.write(Eadr, code);
+    ++Eadr;
+  }
+  code  = MM;
+  morseOut();
+  code = M1;
+  morseOut();
+  memoryflag &= MEM_EN_CL;
+  displayfreq();
+  digitalWrite(MUTE, LOW);
 }
 
 void int_memory_send() {
-	memoryflag |= MEM_EN;
-	if (global_state.key.mode == KEY_STRAIGHT) {
-		sk_mem_send();
-	} else {
-		do {
-			if (digitalRead(DASHin) == LOW) { send_memory0();}
-			if (digitalRead(DOTin) == LOW) {  send_memory1();}
-			if (bitRead(sw_inputs,R_sw) !=1){memoryflag =0; displayfreq(); digitalWrite(MUTE, LOW);}
-		} while (bitRead(memoryflag, 7) !=0);
-	}
-	do delay(20);
-	while (bitRead(sw_inputs, R_sw) == LOW);
+  memoryflag |= MEM_EN;
+  if (global_state.key.mode == KEY_STRAIGHT) {
+    sk_mem_send();
+  } else {
+    do {
+      if (digitalRead(DASHin) == LOW) { send_memory0();}
+      if (digitalRead(DOTin) == LOW) {  send_memory1();}
+      if (bitRead(sw_inputs,R_sw) !=1){memoryflag =0; displayfreq(); digitalWrite(MUTE, LOW);}
+    } while (bitRead(memoryflag, 7) !=0);
+  }
+  do delay(20);
+  while (bitRead(sw_inputs, R_sw) == LOW);
 }
 
 void sk_mem_send() {
-	do {
-		if (digitalRead(DOTin) == LOW) {  send_memory1();}
-		if (bitRead(sw_inputs,R_sw) !=1){memoryflag =0; displayfreq();}
-	}
-	while (bitRead(memoryflag, 7) !=0);
+  do {
+    if (digitalRead(DOTin) == LOW) {  send_memory1();}
+    if (bitRead(sw_inputs,R_sw) !=1){memoryflag =0; displayfreq();}
+  }
+  while (bitRead(memoryflag, 7) !=0);
 }
 
 void send_memory0() {
-	int Eadr = 16;
-	LOC =0;
-	for (int LOC = 0; LOC < 64; LOC++) {
-		code =  EEPROM.read(Eadr);
-		myMdata[LOC] = code;
-		++Eadr;
-	}
-	int_morseOut();
-	if (ritflag & RIT_ON == 1){RITdisplay();}
-	else displayfreq();
+  int Eadr = 16;
+  LOC =0;
+  for (int LOC = 0; LOC < 64; LOC++) {
+    code =  EEPROM.read(Eadr);
+    myMdata[LOC] = code;
+    ++Eadr;
+  }
+  int_morseOut();
+  if (ritflag & RIT_ON == 1){RITdisplay();}
+  else displayfreq();
 }
 
 void send_memory1() {
-	int Eadr = 81;
-	LOC =0;
-	for (int LOC = 0; LOC < 64; LOC++) {
-		code =  EEPROM.read(Eadr);
-		myMdata[LOC] = code;
-		++Eadr;
-	}
-	int_morseOut();
-	if (ritflag & RIT_ON == 1){RITdisplay();}
-	else displayfreq();
+  int Eadr = 81;
+  LOC =0;
+  for (int LOC = 0; LOC < 64; LOC++) {
+    code =  EEPROM.read(Eadr);
+    myMdata[LOC] = code;
+    ++Eadr;
+  }
+  int_morseOut();
+  if (ritflag & RIT_ON == 1){RITdisplay();}
+  else displayfreq();
 }
 
 /*
@@ -807,124 +807,124 @@ void send_memory1() {
 
 
 void keyer(){
-	code = 0x01;
-	inkeyer();
+  code = 0x01;
+  inkeyer();
 }
 
 void inkeyer() {
-	digitalWrite(MUTE, HIGH);
+  digitalWrite(MUTE, HIGH);
 
-	Wire.beginTransmission(0x60);
-	Wire.write(REG+3);
-	Wire.write(0xfd);
-	Wire.endTransmission();
+  Wire.beginTransmission(0x60);
+  Wire.write(REG+3);
+  Wire.write(0xfd);
+  Wire.endTransmission();
 
-	si5351.set_freq(TXfreq, 0ULL, SI5351_CLK1);
+  si5351.set_freq(TXfreq, 0ULL, SI5351_CLK1);
 
-	ktimer2 = dashTime*2;
-	ktimer = 0;
-	global_state.key.timeout = 0;
-	do {
-		if (digitalRead(DASHin) == LOW) {dash();} // dash
-		if (digitalRead(DOTin) == LOW) {dot();}  //dot
-		if (global_state.key.dash)
-			dash();
-		if (global_state.key.dit)
-			dot();
-	} while (!global_state.key.timeout);
+  ktimer2 = dashTime*2;
+  ktimer = 0;
+  global_state.key.timeout = 0;
+  do {
+    if (digitalRead(DASHin) == LOW) {dash();} // dash
+    if (digitalRead(DOTin) == LOW) {dot();}  //dot
+    if (global_state.key.dash)
+      dash();
+    if (global_state.key.dit)
+      dot();
+  } while (!global_state.key.timeout);
 
-	++LOC ;
-	if (LOC == 64) {--LOC;}
-	myMdata[LOC] = code;
+  ++LOC ;
+  if (LOC == 64) {--LOC;}
+  myMdata[LOC] = code;
 
 
-	ktimer2 = dashTime*2;
-	ktimer = 0;
-	global_state.key.timeout = 0;
+  ktimer2 = dashTime*2;
+  ktimer = 0;
+  global_state.key.timeout = 0;
 
-	do {
-		if (digitalRead(DASHin) == LOW) {keyer();} // dash
-		if (digitalRead(DOTin) == LOW) {keyer();}  //dot
-	} while (!global_state.key.timeout);
+  do {
+    if (digitalRead(DASHin) == LOW) {keyer();} // dash
+    if (digitalRead(DOTin) == LOW) {keyer();}  //dot
+  } while (!global_state.key.timeout);
 
-	++LOC;
-	if (LOC == 64) {--LOC;}
-	myMdata[LOC] = 0x00;
-	Wire.beginTransmission(0x60); //turn off the Tx output, which gets turned on when the chip is updated
-	Wire.write(REG+3);
-	Wire.write(0xfe);
-	Wire.endTransmission();
-	if (bitRead(memoryflag,7) != 1) {digitalWrite(MUTE, LOW);}
+  ++LOC;
+  if (LOC == 64) {--LOC;}
+  myMdata[LOC] = 0x00;
+  Wire.beginTransmission(0x60); //turn off the Tx output, which gets turned on when the chip is updated
+  Wire.write(REG+3);
+  Wire.write(0xfe);
+  Wire.endTransmission();
+  if (bitRead(memoryflag,7) != 1) {digitalWrite(MUTE, LOW);}
 }
 
 void  dash(){
 
-	if (bitRead(memoryflag,7) != 1) { digitalWrite(TXEN, HIGH);}
-	code = code << 1;
-	code = code |= bit0set;
-	tone(A2, 600);
-	global_state.key.dit = 0;
-	ktimer2 = dashTime;
-	ktimer =0;
-	global_state.key.timeout = 0;
-	do
-		update_Dot_Latch();
-	while (!global_state.key.timeout);
+  if (bitRead(memoryflag,7) != 1) { digitalWrite(TXEN, HIGH);}
+  code = code << 1;
+  code = code |= bit0set;
+  tone(A2, 600);
+  global_state.key.dit = 0;
+  ktimer2 = dashTime;
+  ktimer =0;
+  global_state.key.timeout = 0;
+  do
+    update_Dot_Latch();
+  while (!global_state.key.timeout);
 
-	digitalWrite(TXEN, LOW);
-	noTone(A2);
+  digitalWrite(TXEN, LOW);
+  noTone(A2);
 
-	ktimer2 = ditTime;
-	ktimer = 0;
-	global_state.key.timeout = 0;
+  ktimer2 = ditTime;
+  ktimer = 0;
+  global_state.key.timeout = 0;
 
 
-	do
-		update_Dot_Latch();
-	while (!global_state.key.timeout);
+  do
+    update_Dot_Latch();
+  while (!global_state.key.timeout);
 }
 
 void  dot() {
 
-	if (bitRead(memoryflag,7) != 1) { digitalWrite(TXEN, HIGH);}
-	code  = code << 1;
-	tone(A2, 600);
-	ktimer2 = ditTime;
-	global_state.key.dit = 0;
-	ktimer =0;
-	global_state.key.timeout = 0;
-	do
-		update_Dash_Latch();
-	while (!global_state.key.timeout);
+  if (bitRead(memoryflag,7) != 1) { digitalWrite(TXEN, HIGH);}
+  code  = code << 1;
+  tone(A2, 600);
+  ktimer2 = ditTime;
+  global_state.key.dit = 0;
+  ktimer =0;
+  global_state.key.timeout = 0;
+  do
+    update_Dash_Latch();
+  while (!global_state.key.timeout);
 
-	digitalWrite(TXEN, LOW);
-	noTone(A2);
-	ktimer2 = ditTime;
-	ktimer =0;
-	global_state.key.timeout = 0;
+  digitalWrite(TXEN, LOW);
+  noTone(A2);
+  ktimer2 = ditTime;
+  ktimer =0;
+  global_state.key.timeout = 0;
 
-	do
-		update_Dash_Latch();
-	while (!global_state.key.timeout);
+  do
+    update_Dash_Latch();
+  while (!global_state.key.timeout);
 
 }
 
 void update_Dot_Latch()
 {
-	if (digitalRead(DOTin) == LOW)
-		global_state.key.dit = 1;
+  if (digitalRead(DOTin) == LOW)
+    global_state.key.dit = 1;
 }
 
 void update_Dash_Latch()
 {
-	if (digitalRead(DASHin) == LOW)
-		global_state.key.dash = 1;
+  if (digitalRead(DASHin) == LOW)
+    global_state.key.dash = 1;
 }
 
 // clear the message memory bank by filling with 0xff
 
 void clear_arry() {
-	for (int LOC = 0; LOC < 64; LOC++) {myMdata[LOC] = 0xff;}
+  for (int LOC = 0; LOC < 64; LOC++) {myMdata[LOC] = 0xff;}
 }
 /*
  * output a morse characer encoded 1 = dash, 0 = dot, 1 bit start bit added to start of string.
@@ -935,90 +935,90 @@ void clear_arry() {
 
 void int_morseOut()
 {
-	digitalWrite(MUTE, HIGH);
-	Wire.beginTransmission(0x60);
-	Wire.write(REG+3);
-	Wire.write(0xfd);
-	Wire.endTransmission();
-	si5351.set_freq(TXfreq, 0ULL, SI5351_CLK1);
+  digitalWrite(MUTE, HIGH);
+  Wire.beginTransmission(0x60);
+  Wire.write(REG+3);
+  Wire.write(0xfd);
+  Wire.endTransmission();
+  si5351.set_freq(TXfreq, 0ULL, SI5351_CLK1);
 
-	memoryflag &= MEM_EN_CL;
-	for (int LOC = 0; LOC < 64; LOC++)
-	{code = myMdata[LOC];
-		if (code == 0x00) {delay(ditTime);}
-		if (code != 0xff) {morseOut();}
-	}
+  memoryflag &= MEM_EN_CL;
+  for (int LOC = 0; LOC < 64; LOC++)
+  {code = myMdata[LOC];
+    if (code == 0x00) {delay(ditTime);}
+    if (code != 0xff) {morseOut();}
+  }
 
-	Wire.beginTransmission(0x60);
-	Wire.write(REG+3);
-	Wire.write(0xfe);
-	Wire.endTransmission();
+  Wire.beginTransmission(0x60);
+  Wire.write(REG+3);
+  Wire.write(0xfe);
+  Wire.endTransmission();
 
-	digitalWrite(MUTE, LOW);
+  digitalWrite(MUTE, LOW);
 }
 
 void morseOut() {
-	int i;
+  int i;
 
-	for (i = 7; i >= 0; i--)
-		if (code & (1 << i))
-			break;
+  for (i = 7; i >= 0; i--)
+    if (code & (1 << i))
+      break;
 
-	for (i--; i >= 0; i--) {
-		if (code & (1 << i))
-			dah();
-		else
-			dit();
-	}
-	delay(dashTime);
+  for (i--; i >= 0; i--) {
+    if (code & (1 << i))
+      dah();
+    else
+      dit();
+  }
+  delay(dashTime);
 }
 
 void  dah(){
-	if (bitRead(memoryflag,7) != 1) { digitalWrite(TXEN, HIGH);}
-	tone(A2, 600);
-	delay(dashTime);
-	digitalWrite(TXEN, LOW);
-	noTone(A2);
-	delay(ditTime);
+  if (bitRead(memoryflag,7) != 1) { digitalWrite(TXEN, HIGH);}
+  tone(A2, 600);
+  delay(dashTime);
+  digitalWrite(TXEN, LOW);
+  noTone(A2);
+  delay(ditTime);
 }
 
 void  dit() {
-	if (bitRead(memoryflag,7) != 1) { digitalWrite(TXEN, HIGH);}
-	tone(A2, 600);
-	delay(ditTime);
-	digitalWrite(TXEN, LOW);
-	noTone(A2);
-	delay(ditTime);
+  if (bitRead(memoryflag,7) != 1) { digitalWrite(TXEN, HIGH);}
+  tone(A2, 600);
+  delay(ditTime);
+  digitalWrite(TXEN, LOW);
+  noTone(A2);
+  delay(ditTime);
 }
 
 void loadWPM(int wpm){
-	ditTime = 1200/wpm;
-	dashTime = ditTime*3;
+  ditTime = 1200/wpm;
+  dashTime = ditTime*3;
 }
 
 
 void Straight_key(){
-	digitalWrite(MUTE, HIGH);
-	Wire.beginTransmission(0x60);
-	Wire.write(REG+3);
-	Wire.write(0xfd);
-	Wire.endTransmission();
+  digitalWrite(MUTE, HIGH);
+  Wire.beginTransmission(0x60);
+  Wire.write(REG+3);
+  Wire.write(0xfd);
+  Wire.endTransmission();
 
-	si5351.set_freq(TXfreq, 0ULL, SI5351_CLK1);
-	tone(A2, 600);
+  si5351.set_freq(TXfreq, 0ULL, SI5351_CLK1);
+  tone(A2, 600);
 
-	digitalWrite(TXEN, HIGH);
-	do delay(2);
-	while (digitalRead(DOTin)== LOW);
+  digitalWrite(TXEN, HIGH);
+  do delay(2);
+  while (digitalRead(DOTin)== LOW);
 
-	digitalWrite(TXEN, LOW);
-	noTone(A2);
-	delay(5);
-	Wire.beginTransmission(0x60);
-	Wire.write(REG+3);
-	Wire.write(0xfe);
-	Wire.endTransmission();
-	digitalWrite(MUTE, LOW);
+  digitalWrite(TXEN, LOW);
+  noTone(A2);
+  delay(5);
+  Wire.beginTransmission(0x60);
+  Wire.write(REG+3);
+  Wire.write(0xfe);
+  Wire.endTransmission();
+  digitalWrite(MUTE, LOW);
 }
 
 /*
@@ -1034,272 +1034,274 @@ void Straight_key(){
 
 
 void calibration(){
-	long temp = cal_value;
-	digit4 = LED_C;
-	digit3 = LED_A;
-	digit2 = LED_L;
-	digit1 = 0x00;
-	calwrite();
-	Wire.beginTransmission(0x60); //turn on Tx clock output
-	Wire.write(REG+3);
-	Wire.write(0xfd);
-	Wire.endTransmission();
-	delay(500);
+  long temp = cal_value;
+  digit4 = LED_C;
+  digit3 = LED_A;
+  digit2 = LED_L;
+  digit1 = 0x00;
+  calwrite();
+  Wire.beginTransmission(0x60); //turn on Tx clock output
+  Wire.write(REG+3);
+  Wire.write(0xfd);
+  Wire.endTransmission();
+  delay(500);
 
-	state = bitRead (sw_inputs,K_sw);
-	while (state == HIGH) {if  (EncoderFlag == 1) {ADJ_UP();}
-		if  (EncoderFlag == 2) {ADJ_DWN();}
-		state = bitRead (sw_inputs,K_sw);}
+  state = bitRead (sw_inputs,K_sw);
+  while (state == HIGH) {if  (EncoderFlag == 1) {ADJ_UP();}
+    if  (EncoderFlag == 2) {ADJ_DWN();}
+    state = bitRead (sw_inputs,K_sw);}
 
 
-	temp = cal_value;
-	EEPROM.write(4, temp);
-	temp = cal_value >>8;
-	EEPROM.write(5, temp);
+  temp = cal_value;
+  EEPROM.write(4, temp);
+  temp = cal_value >>8;
+  EEPROM.write(5, temp);
 
-	Wire.beginTransmission(0x60); //turn off Tx clock output
-	Wire.write(REG+3);
-	Wire.write(0xfe);
-	Wire.endTransmission();
+  Wire.beginTransmission(0x60); //turn off Tx clock output
+  Wire.write(REG+3);
+  Wire.write(0xfe);
+  Wire.endTransmission();
 
-	while (state == LOW) {delay(100); state = bitRead (sw_inputs,K_sw);}
-	digitalWrite(MUTE, LOW);
-	OPfreq = IFfreq_default;
-	calwrite2();
-	displayfreq();
-	delay(500);
-	state = bitRead (sw_inputs,K_sw);
-	while (state == HIGH) {if  (EncoderFlag == 2) {ADJ_UP_f();}
-		if  (EncoderFlag == 1) {ADJ_DWN_f();}
-		state = bitRead (sw_inputs,K_sw);}
+  while (state == LOW) {delay(100); state = bitRead (sw_inputs,K_sw);}
+  digitalWrite(MUTE, LOW);
+  OPfreq = IFfreq_default;
+  calwrite2();
+  displayfreq();
+  delay(500);
+  state = bitRead (sw_inputs,K_sw);
+  while (state == HIGH) {if  (EncoderFlag == 2) {ADJ_UP_f();}
+    if  (EncoderFlag == 1) {ADJ_DWN_f();}
+    state = bitRead (sw_inputs,K_sw);}
 
-	IFfreq = OPfreq;
-	temp = OPfreq;
-	EEPROM.write(0, temp);
-	temp = OPfreq >>8;
-	EEPROM.write(1, temp);
-	temp = OPfreq >>16;
-	EEPROM.write(2, temp);
-	temp = OPfreq >> 24;
-	EEPROM.write(3, temp);
+  IFfreq = OPfreq;
+  temp = OPfreq;
+  EEPROM.write(0, temp);
+  temp = OPfreq >>8;
+  EEPROM.write(1, temp);
+  temp = OPfreq >>16;
+  EEPROM.write(2, temp);
+  temp = OPfreq >> 24;
+  EEPROM.write(3, temp);
 
-	changeBand();
+  changeBand();
 
-	digit4 = LED_P;
-	digit3 = LED_E;
-	digit2 = LED_A;
-	digit1 = 0x00;
-	si5351.set_freq(OPfreq, 0ULL, SI5351_CLK1);
-	Wire.beginTransmission(0x60); //turn off Tx clock output
-	Wire.write(REG+3);
-	Wire.write(0xfc);
-	Wire.endTransmission();
+  digit4 = LED_P;
+  digit3 = LED_E;
+  digit2 = LED_A;
+  digit1 = 0x00;
+  si5351.set_freq(OPfreq, 0ULL, SI5351_CLK1);
+  Wire.beginTransmission(0x60); //turn off Tx clock output
+  Wire.write(REG+3);
+  Wire.write(0xfc);
+  Wire.endTransmission();
 
-	while (state == HIGH) {delay(100); state = bitRead (sw_inputs,K_sw);}
-	Wire.beginTransmission(0x60); //turn off Tx clock output
-	Wire.write(REG+3);
-	Wire.write(0xfe);
-	Wire.endTransmission();
-	displayfreq();
-	while (state == LOW) {delay(100); state = bitRead (sw_inputs,K_sw);}
-	delay(500);
+  while (state == HIGH) {delay(100); state = bitRead (sw_inputs,K_sw);}
+  Wire.beginTransmission(0x60); //turn off Tx clock output
+  Wire.write(REG+3);
+  Wire.write(0xfe);
+  Wire.endTransmission();
+  displayfreq();
+  while (state == LOW) {delay(100); state = bitRead (sw_inputs,K_sw);}
+  delay(500);
 }
 
 void ADJ_UP_f(){
-	OPfreq = OPfreq + 1000;
-	EncoderFlag = 0;
-	calwrite2();
+  OPfreq = OPfreq + 1000;
+  EncoderFlag = 0;
+  calwrite2();
 }
 
 void ADJ_DWN_f() {
-	OPfreq = OPfreq - 1000;
-	EncoderFlag = 0;
-	calwrite2();
+  OPfreq = OPfreq - 1000;
+  EncoderFlag = 0;
+  calwrite2();
 }
 
 void ADJ_UP(){
-	cal_value = cal_value + 100;
-	EncoderFlag = 0;
-	calwrite();
+  cal_value = cal_value + 100;
+  EncoderFlag = 0;
+  calwrite();
 }
 
 void ADJ_DWN() {
-	cal_value = cal_value - 100;
-	EncoderFlag = 0;
-	calwrite();
+  cal_value = cal_value - 100;
+  EncoderFlag = 0;
+  calwrite();
 }
 
 void calwrite() {
-	si5351.set_correction(cal_value);
-	si5351.set_freq(1000000000, 0ULL, SI5351_CLK1);
+  si5351.set_correction(cal_value);
+  si5351.set_freq(1000000000, 0ULL, SI5351_CLK1);
 }
 
 void calwrite2() {
-	si5351.set_freq(OPfreq, 0ULL, SI5351_CLK0);
-	displayfreq();
+  si5351.set_freq(OPfreq, 0ULL, SI5351_CLK0);
+  displayfreq();
 }
 
 void cal_data(){
 
-	unsigned long temp = 0;
+  unsigned long temp = 0;
 
-	temp = EEPROM.read(3);
-	IFfreq = IFfreq+temp;
-	IFfreq = IFfreq << 8;
-	temp = EEPROM.read(2);
-	IFfreq = IFfreq + temp;
-	IFfreq = IFfreq << 8;
-	temp = EEPROM.read(1);
-	IFfreq = IFfreq + temp;
-	IFfreq = IFfreq <<8;
-	temp =  EEPROM.read(0);
-	IFfreq = IFfreq + temp;
+  temp = EEPROM.read(3);
+  IFfreq = IFfreq+temp;
+  IFfreq = IFfreq << 8;
+  temp = EEPROM.read(2);
+  IFfreq = IFfreq + temp;
+  IFfreq = IFfreq << 8;
+  temp = EEPROM.read(1);
+  IFfreq = IFfreq + temp;
+  IFfreq = IFfreq <<8;
+  temp =  EEPROM.read(0);
+  IFfreq = IFfreq + temp;
 
-	temp =0;
-	temp = EEPROM.read(5);
-	cal_value = temp;
-	cal_value = cal_value <<8;
-	temp = EEPROM.read(4);
-	cal_value = cal_value + temp;
+  temp =0;
+  temp = EEPROM.read(5);
+  cal_value = temp;
+  cal_value = cal_value <<8;
+  temp = EEPROM.read(4);
+  cal_value = cal_value + temp;
 
 }
 
 void changeBand(){
-	digit4 = LED_N_6;
-	digit3 = LED_n;
-	get_band();
+  digit4 = LED_N_6;
+  digit3 = LED_n;
+  get_band();
 
-	while (state == LOW) {delay(100); state = bitRead (sw_inputs,K_sw);}
+  while (state == LOW) {delay(100); state = bitRead (sw_inputs,K_sw);}
 
-	do {
-		if (bitRead(sw_inputs,R_sw) !=1) {nextband();}
-	}
-	while (bitRead(sw_inputs,K_sw) !=0);
-	//displayfreq();
-	PLLwrite();
-	EEPROM.write(6,BANDpointer);
+  do {
+    if (bitRead(sw_inputs,R_sw) !=1) {nextband();}
+  }
+  while (bitRead(sw_inputs,K_sw) !=0);
+  //displayfreq();
+  PLLwrite();
+  EEPROM.write(6,BANDpointer);
 
-	do {delay(50);}
-	while (bitRead(sw_inputs,K_sw) !=1);
+  do {delay(50);}
+  while (bitRead(sw_inputs,K_sw) !=1);
 
 }
 
 
 void nextband() {
-	++BANDpointer;
-	if (BANDpointer >= 11)
-		BANDpointer = 1;
-	get_band();
-	do
-		delay(50);
-	while (bitRead(sw_inputs,R_sw) !=1);
+  ++BANDpointer;
+  if (BANDpointer >= 11)
+    BANDpointer = 1;
+  get_band();
+  do
+    delay(50);
+  while (bitRead(sw_inputs,R_sw) !=1);
 }
 
 
 void get_band() {
-	switch(BANDpointer) {
-		case  1: BAND160(); break;
-		case  2:  BAND80(); break;
-		case  3:  BAND60(); break;
-		case  4:  BAND40(); break;
-		case  5:  BAND30(); break;
-		case  6:  BAND20(); break;
-		case  7:  BAND17(); break;
-		case  8:  BAND15(); break;
-		case  9:  BAND12(); break;
-		case 10:  BAND10(); break;
-	}
+  switch(BANDpointer) {
+    case  1: BAND160(); break;
+    case  2:  BAND80(); break;
+    case  3:  BAND60(); break;
+    case  4:  BAND40(); break;
+    case  5:  BAND30(); break;
+    case  6:  BAND20(); break;
+    case  7:  BAND17(); break;
+    case  8:  BAND15(); break;
+    case  9:  BAND12(); break;
+    case 10:  BAND10(); break;
+  }
 
 }
 
 void BAND160() {
-	digit2 = LED_N_1;
-	digit1 = LED_N_6;
-	low_band_limit = 180000000;
-	high_band_limit = 182000000;
-	OPfreq = 180200000;
+  digit2 = LED_N_1;
+  digit1 = LED_N_6;
+  low_band_limit = 180000000;
+  high_band_limit = 182000000;
+  OPfreq = 180200000;
 }
 
 void BAND80() {
-	digit2 = LED_N_8;
-	digit1 = LED_N_0;
-	low_band_limit = 350000000;
-	high_band_limit = 400000000;
-	OPfreq = 356000000;
+  digit2 = LED_N_8;
+  digit1 = LED_N_0;
+  low_band_limit = 350000000;
+  high_band_limit = 400000000;
+  OPfreq = 356000000;
 }
 
 void BAND60() {
-	digit2 = LED_N_6;
-	digit1 = LED_N_0;
-	low_band_limit = 535150000;
-	high_band_limit = 536650000;
-	OPfreq = 535150000;
+  digit2 = LED_N_6;
+  digit1 = LED_N_0;
+  low_band_limit = 535150000;
+  high_band_limit = 536650000;
+  OPfreq = 535150000;
 }
 
 
 void BAND40() {
-	digit2 = LED_N_4;
-	digit1 = LED_N_0;
-	low_band_limit = 700000000;
-	high_band_limit = 730000000;
-	OPfreq = 703000000;
+  digit2 = LED_N_4;
+  digit1 = LED_N_0;
+  low_band_limit = 700000000;
+  high_band_limit = 730000000;
+  OPfreq = 703000000;
 }
 
 void BAND30() {
-	digit2 = LED_N_3;
-	digit1 = LED_N_0;
-	low_band_limit = 1010000000;
-	high_band_limit = 1015000000;
-	OPfreq = 1011800000;
+  digit2 = LED_N_3;
+  digit1 = LED_N_0;
+  low_band_limit = 1010000000;
+  high_band_limit = 1015000000;
+  OPfreq = 1011800000;
 }
 
 void BAND20() {
-	digit2 = LED_N_2;
-	digit1 = LED_N_0;
-	low_band_limit = 1400000000;
-	high_band_limit = 1450000000;
-	OPfreq = 1406000000;
+  digit2 = LED_N_2;
+  digit1 = LED_N_0;
+  low_band_limit = 1400000000;
+  high_band_limit = 1450000000;
+  OPfreq = 1406000000;
 }
 
 void BAND17() {
-	digit2 = LED_N_1;
-	digit1 = LED_N_7;
-	low_band_limit = 1806800000;
-	high_band_limit = 1850000000;
-	OPfreq = 1807000000;
+  digit2 = LED_N_1;
+  digit1 = LED_N_7;
+  low_band_limit = 1806800000;
+  high_band_limit = 1850000000;
+  OPfreq = 1807000000;
 }
 
 void BAND15() {
-	digit2 = LED_N_1;
-	digit1 = LED_N_5;
-	low_band_limit = 2100000000u;
-	high_band_limit = 2150000000u;
-	OPfreq = 2106000000u;
+  digit2 = LED_N_1;
+  digit1 = LED_N_5;
+  low_band_limit = 2100000000u;
+  high_band_limit = 2150000000u;
+  OPfreq = 2106000000u;
 }
 
 void BAND12() {
-	digit2 = LED_N_1;
-	digit1 = LED_N_2;
-	low_band_limit = 2489000000u;
-	high_band_limit = 2500000000u;
-	OPfreq = 2490600000u;
+  digit2 = LED_N_1;
+  digit1 = LED_N_2;
+  low_band_limit = 2489000000u;
+  high_band_limit = 2500000000u;
+  OPfreq = 2490600000u;
 }
 
 void BAND10() {
-	digit2 = LED_N_1;
-	digit1 = LED_N_0;
-	low_band_limit = 2800000000u;
-	high_band_limit = 3000000000u;
-	OPfreq = 2860000000u;
+  digit2 = LED_N_1;
+  digit1 = LED_N_0;
+  low_band_limit = 2800000000u;
+  high_band_limit = 3000000000u;
+  OPfreq = 2860000000u;
 }
 
 /*
 void ee_erase() {
-	for (int i=0; i<=7; i++){
-	EEPROM.write(i, 0xff);}
-	digit4 = LED_d;
-	digit3 = LED_N_0;
-	digit2 = LED_n;
-	digit1 = LED_E;
+  for (int i=0; i<=7; i++){
+  EEPROM.write(i, 0xff);}
+  digit4 = LED_d;
+  digit3 = LED_N_0;
+  digit2 = LED_n;
+  digit1 = LED_E;
 }
 */
+
+// vim: tabstop=2 shiftwidth=2 expandtab:
