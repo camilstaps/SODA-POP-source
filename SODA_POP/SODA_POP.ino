@@ -130,6 +130,8 @@ const byte LED_DIGITS[] =
 #define E_sw  2
 #define SK_FG 4
 
+#define IF_DEFAULT 491480000
+
 enum band {
   BAND_160,
   BAND_80,
@@ -206,6 +208,8 @@ struct state {
 
   unsigned long rit_tx_freq;
   byte rit:1;
+
+  byte display[4];
 };
 
 struct state state;
@@ -226,15 +230,8 @@ long        duration=0;
 byte        LOC = 0;
 int         Eadr;
 
-byte      EncoderFlag = 0;
-byte      sw_inputs ;
-byte      digit1 = 0;
-byte      digit2 = 0;
-byte      digit3 = 0;
-byte      digit4 = 0;
-byte      digitX = 0;
-
-byte      d1temp = 0;
+byte EncoderFlag = 0;
+byte sw_inputs ;
 
 volatile int    digit_counter = 1;
 
@@ -258,19 +255,11 @@ volatile int cLast = HIGH;    // init last val the same, low
 volatile int d = HIGH;        // make data val low
 
 
-unsigned long   time1;
-unsigned long   time0;
-unsigned long   IFfreq;
-int             REG = 0;
-long            cal_value = 15000;
-//**********************************************
-unsigned long   IFfreq_default =  491480000;
-//***********************************************
-
-// registers for limit testing
-
-unsigned long  low_band_limit;  //low limit, band tuning
-unsigned long  high_band_limit; //high limit, band tuning
+unsigned long time1;
+unsigned long time0;
+unsigned long IFfreq;
+int           REG = 0;
+long          cal_value = 15000;
 
 ISR (TIMER1_COMPA_vect) {TIMER1_SERVICE_ROUTINE();}
 
@@ -321,9 +310,9 @@ void setup() {
   cal_data();    //load calibration data
   si5351.set_correction(cal_value); //correct the clock chip error
   stepK = Fstep50 ; //default tuning rate
-  stepSize = 2;
-  digit4 = LED_N_6;
-  digit3 = LED_n;
+  stepSize = 0;
+  state.display[3] = LED_N_6;
+  state.display[2] = LED_n;
   setup_band();
   delay(1000);
   displayfreq();
@@ -384,9 +373,9 @@ void timeRIT(){
   duration = 0;
   time0 = tcount;
   do {time1 = tcount; duration = time1- time0; //calculate how long the button has been pushed
-    //if (duration > 2000)   {digit4 = LED_N_6; digit3 = LED_n; digit2 = 0x00; digit1 = 0x00;}
-    if (duration >5000) {digit4 = LED_C; digit3 = LED_A; digit2 = LED_L; digit1 = 0x00;}
-    //if (duration >8000) {digit4 = LED_E; digit2 = LED_r; digit2 = LED_A; digit1 = LED_N_5;}
+    if (duration > 2000) {state.display[3] = LED_N_6; state.display[2] = LED_n; state.display[1] = 0x00; state.display[0] = 0x00;}
+    if (duration > 5000) {state.display[3] = LED_C; state.display[2] = LED_A; state.display[1] = LED_L; state.display[0] = 0x00;}
+    //if (duration >8000) {state.display[3] = LED_E; state.display[1] = LED_r; state.display[1] = LED_A; state.display[0] = LED_N_5;}
     delay(1); }
   while (bitRead(sw_inputs,R_sw) !=1);
   duration = time1 - time0;
@@ -403,9 +392,9 @@ void timebutton() {
   time0 = tcount; //set basetime to current counter value
 
   do {time1 = tcount; duration = time1- time0; //calculate how long the button has been pushed
-    if (duration > 50)   {digit4 = LED_N_5; digit3 = LED_E; digit2 = LED_n; digit1 = LED_d;} //short push message
-    if (duration > 500) {digit4 = LED_C; digit3 = LED_N_5; digit2 = 0x00; digit1 = 0x00;} //1 second push message
-    if (duration > 2000) {;digit4=LED_E; digit3 =LED_n; digit2 = LED_t; digit1 = LED_r;}  //2 second push message
+    if (duration > 50)   {state.display[3] = LED_N_5; state.display[2] = LED_E; state.display[1] = LED_n; state.display[0] = LED_d;} //short push message
+    if (duration > 500) {state.display[3] = LED_C; state.display[2] = LED_N_5; state.display[1] = 0x00; state.display[0] = 0x00;} //1 second push message
+    if (duration > 2000) {;state.display[3]=LED_E; state.display[2] =LED_n; state.display[1] = LED_t; state.display[0] = LED_r;}  //2 second push message
     delay(1); //for some reason a delay call has to be done when doing bit read flag tests or it locks up
     //this doesn't seem to be a problem when doing digital reads of a port pin instead.
   }
@@ -454,7 +443,7 @@ void Tune_DWN() {
 // adjust the operating frequency
 void FREQ_incerment() {
   state.op_freq += stepK;  //add frequenc tuning step to frequency word
-  if (state.op_freq > high_band_limit)
+  if (state.op_freq > BAND_LIMITS_HIGH[state.band])
     FREQ_decerment(); //band tuning limits
   if (state.rit)
     RITdisplay(); //test for RIT mode
@@ -465,7 +454,7 @@ void FREQ_incerment() {
 
 void FREQ_decerment() {
   state.op_freq -= stepK;
-  if (state.op_freq < low_band_limit)
+  if (state.op_freq < BAND_LIMITS_LOW[state.band])
     FREQ_incerment();
   if (state.rit)
     RITdisplay();
@@ -477,26 +466,15 @@ void FREQ_decerment() {
 
 //toggle tuning step rate
 void  nextFstep () {
+  byte d1temp;
 
-  ++ stepSize ;
-  if (stepSize == 3) {(stepSize = 1);}
+  stepSize = (stepSize + 1) % 2;
 
-  switch(stepSize) {
-    case 1:
-      stepK = Fstep200;
-      d1temp = digit1;
-      digit1 = 0x00;
-      delay(100);
-      digit1 = d1temp;
-      break;
-    case 2:
-      stepK = Fstep50;
-      d1temp = digit1;
-      digit1 = 0x00;
-      delay(100);
-      digit1 = d1temp;
-      break;
-  }
+  d1temp = state.display[0];
+  state.display[0] = 0x00;
+  stepK = stepSize == 1 ? Fstep200 : Fstep50;
+  delay(100);
+  state.display[0] = d1temp;
 }
 
 
@@ -545,8 +523,8 @@ void  CS_dwn() {
 
 void wr_CS() {
   loadWPM(state.key.speed);
-  digit1 = LED_DIGITS[state.key.speed % 10];
-  digit2 = LED_DIGITS[state.key.speed / 10];
+  state.display[0] = LED_DIGITS[state.key.speed % 10];
+  state.display[1] = LED_DIGITS[state.key.speed / 10];
 }
 
 
@@ -579,16 +557,16 @@ void RITdisplay()
 
   if (state.rit_tx_freq > state.op_freq) {
     offset = state.rit_tx_freq - state.op_freq;
-    digit3 = LED_neg;
+    state.display[2] = LED_neg;
   } else {
     offset = state.op_freq - state.rit_tx_freq;
-    digit3 = 0x00;
+    state.display[2] = 0x00;
   }
 
-  digit4 = LED_r;
+  state.display[3] = LED_r;
   offset /= 100;
-  digit2 = LED_DIGITS[(offset % 10000) / 1000];
-  digit1 = LED_DIGITS[(offset % 1000) / 100];
+  state.display[1] = LED_DIGITS[(offset % 10000) / 1000];
+  state.display[0] = LED_DIGITS[(offset % 1000) / 100];
 }
 
 ////////////////////////////////////////////////
@@ -600,10 +578,10 @@ void displayfreq() {
   // First divide by 100 to remove the fractional Hz digits
   unsigned long frequency = state.op_freq/100;
   // Then display the digits one by one
-  digit4 = LED_DIGITS[(frequency % 1000000) / 100000];
-  digit3 = LED_DIGITS[(frequency % 100000) / 10000];
-  digit2 = LED_DIGITS[(frequency % 10000) / 1000];
-  digit1 = LED_DIGITS[(frequency % 1000) / 100];
+  state.display[3] = LED_DIGITS[(frequency % 1000000) / 100000];
+  state.display[2] = LED_DIGITS[(frequency % 100000) / 10000];
+  state.display[1] = LED_DIGITS[(frequency % 10000) / 1000];
+  state.display[0] = LED_DIGITS[(frequency % 1000) / 100];
 }
 
 /*
@@ -639,24 +617,24 @@ void TIMER1_SERVICE_ROUTINE()
 
   switch(digit_counter) {
     case 0:
-      PORTD = digit1;
+      PORTD = state.display[0];
       digitalWrite(SLED1, LOW);
       break;
 
     case 1:
-      PORTD = digit2;
+      PORTD = state.display[1];
       digitalWrite(SLED2, LOW);
       digitalWrite(2, HIGH);
       break;
 
     case 2:
-      PORTD = digit3;
+      PORTD = state.display[2];
       digitalWrite(SLED3, LOW);
       break;
 
     case 3:
-      if (digit4 == 0xeb){digit4 = 0x00;}//blank MSD if 0
-      PORTD = digit4;
+      if (state.display[3] == 0xeb){state.display[3] = 0x00;}//blank MSD if 0
+      PORTD = state.display[3];
       digitalWrite(SLED4, LOW);
       break;
   }
@@ -1048,10 +1026,10 @@ void Straight_key(){
 
 void calibration(){
   long temp = cal_value;
-  digit4 = LED_C;
-  digit3 = LED_A;
-  digit2 = LED_L;
-  digit1 = 0x00;
+  state.display[3] = LED_C;
+  state.display[2] = LED_A;
+  state.display[1] = LED_L;
+  state.display[0] = 0x00;
   calwrite();
   Wire.beginTransmission(0x60); //turn on Tx clock output
   Wire.write(REG+3);
@@ -1080,7 +1058,7 @@ void calibration(){
   while (bitRead(sw_inputs, K_sw) == LOW)
     delay(100);
   digitalWrite(MUTE, LOW);
-  state.op_freq = IFfreq_default;
+  state.op_freq = IF_DEFAULT;
   calwrite2();
   displayfreq();
   delay(500);
@@ -1103,10 +1081,10 @@ void calibration(){
 
   changeBand();
 
-  digit4 = LED_P;
-  digit3 = LED_E;
-  digit2 = LED_A;
-  digit1 = 0x00;
+  state.display[3] = LED_P;
+  state.display[2] = LED_E;
+  state.display[1] = LED_A;
+  state.display[0] = 0x00;
   si5351.set_freq(state.op_freq, 0ULL, SI5351_CLK1);
   Wire.beginTransmission(0x60); //turn off Tx clock output
   Wire.write(REG+3);
@@ -1185,8 +1163,8 @@ void cal_data(){
 }
 
 void changeBand(){
-  digit4 = LED_N_6;
-  digit3 = LED_n;
+  state.display[3] = LED_N_6;
+  state.display[2] = LED_n;
   setup_band();
 
   while (bitRead(sw_inputs, K_sw) == LOW)
@@ -1217,21 +1195,19 @@ void nextband() {
 
 
 void setup_band() {
-  low_band_limit = BAND_LIMITS_LOW[state.band];
-  high_band_limit = BAND_LIMITS_HIGH[state.band];
   state.op_freq = BAND_OP_FREQS[state.band];
-  digit1 = LED_DIGITS[BAND_DIGITS_1[state.band]];
-  digit2 = LED_DIGITS[BAND_DIGITS_2[state.band]];
+  state.display[0] = LED_DIGITS[BAND_DIGITS_1[state.band]];
+  state.display[1] = LED_DIGITS[BAND_DIGITS_2[state.band]];
 }
 
 /*
 void ee_erase() {
   for (int i=0; i<=7; i++){
   EEPROM.write(i, 0xff);}
-  digit4 = LED_d;
-  digit3 = LED_N_0;
-  digit2 = LED_n;
-  digit1 = LED_E;
+  state.display[3] = LED_d;
+  state.display[2] = LED_N_0;
+  state.display[1] = LED_n;
+  state.display[0] = LED_E;
 }
 */
 
