@@ -130,6 +130,60 @@ const byte LED_DIGITS[] =
 #define E_sw  2
 #define SK_FG 4
 
+enum band {
+  BAND_160,
+  BAND_80,
+  BAND_60,
+  BAND_40,
+  BAND_30,
+  BAND_20,
+  BAND_17,
+  BAND_15,
+  BAND_12,
+  BAND_10,
+  LAST_BAND,
+  BAND_UNKNOWN = 0xff
+};
+
+const byte BAND_DIGITS_2[] = {1,8,6,4,3,2,1,1,1,1};
+const byte BAND_DIGITS_1[] = {6,0,0,0,0,0,7,5,2,0};
+const unsigned long BAND_LIMITS_LOW[] =
+  {  180000000
+  ,  350000000
+  ,  535150000
+  ,  700000000
+  , 1010000000
+  , 1400000000
+  , 1806800000
+  , 2100000000u
+  , 2489000000u
+  , 2800000000u
+  };
+const unsigned long BAND_LIMITS_HIGH[] =
+  {  182000000
+  ,  400000000
+  ,  536650000
+  ,  730000000
+  , 1015000000
+  , 1450000000
+  , 1850000000
+  , 2150000000u
+  , 2500000000u
+  , 3000000000u
+  };
+const unsigned long BAND_OP_FREQS[] =
+  {  180200000
+  ,  356000000
+  ,  535150000
+  ,  703000000
+  , 1011800000
+  , 1406000000
+  , 1807000000
+  , 2106000000u
+  , 2490600000u
+  , 2860000000u
+  };
+
 #define KEY_IAMBIC 0
 #define KEY_STRAIGHT 1
 
@@ -145,6 +199,8 @@ struct key_state {
 
 struct state {
   struct key_state key;
+
+  enum band band;
 
   unsigned long op_freq;
 
@@ -170,7 +226,6 @@ long        duration=0;
 byte        LOC = 0;
 int         Eadr;
 
-byte      BANDpointer = 1;
 byte      EncoderFlag = 0;
 byte      sw_inputs ;
 byte      digit1 = 0;
@@ -205,7 +260,6 @@ volatile int d = HIGH;        // make data val low
 
 unsigned long   time1;
 unsigned long   time0;
-unsigned long   temp ;
 unsigned long   IFfreq;
 int             REG = 0;
 long            cal_value = 15000;
@@ -258,8 +312,11 @@ void setup() {
 
   delay(100); //let things settle down a bit
 
-  BANDpointer = EEPROM.read(6); // check for operating band
-  if (BANDpointer == 0xff) {BANDpointer = 1; calibration();}
+  state.band = (enum band) EEPROM.read(6); // check for operating band
+  if (state.band == BAND_UNKNOWN) {
+    state.band = (enum band) 0;
+    calibration();
+  }
 
   cal_data();    //load calibration data
   si5351.set_correction(cal_value); //correct the clock chip error
@@ -267,7 +324,7 @@ void setup() {
   stepSize = 2;
   digit4 = LED_N_6;
   digit3 = LED_n;
-  get_band();
+  setup_band();
   delay(1000);
   displayfreq();
   PLLwrite();
@@ -1130,7 +1187,7 @@ void cal_data(){
 void changeBand(){
   digit4 = LED_N_6;
   digit3 = LED_n;
-  get_band();
+  setup_band();
 
   while (bitRead(sw_inputs, K_sw) == LOW)
     delay(100);
@@ -1139,122 +1196,32 @@ void changeBand(){
     if (bitRead(sw_inputs,R_sw) !=1) {nextband();}
   }
   while (bitRead(sw_inputs,K_sw) !=0);
-  //displayfreq();
+  displayfreq();
   PLLwrite();
-  EEPROM.write(6,BANDpointer);
+  EEPROM.write(6, (byte) state.band);
 
   do {delay(50);}
   while (bitRead(sw_inputs,K_sw) !=1);
-
 }
 
 
 void nextband() {
-  ++BANDpointer;
-  if (BANDpointer >= 11)
-    BANDpointer = 1;
-  get_band();
+  state.band = (enum band) (((byte) state.band) + 1);
+  if (state.band >= LAST_BAND)
+    state.band = (enum band) 0;
+  setup_band();
   do
     delay(50);
   while (bitRead(sw_inputs,R_sw) !=1);
 }
 
 
-void get_band() {
-  switch(BANDpointer) {
-    case  1: BAND160(); break;
-    case  2:  BAND80(); break;
-    case  3:  BAND60(); break;
-    case  4:  BAND40(); break;
-    case  5:  BAND30(); break;
-    case  6:  BAND20(); break;
-    case  7:  BAND17(); break;
-    case  8:  BAND15(); break;
-    case  9:  BAND12(); break;
-    case 10:  BAND10(); break;
-  }
-
-}
-
-void BAND160() {
-  digit2 = LED_N_1;
-  digit1 = LED_N_6;
-  low_band_limit = 180000000;
-  high_band_limit = 182000000;
-  state.op_freq = 180200000;
-}
-
-void BAND80() {
-  digit2 = LED_N_8;
-  digit1 = LED_N_0;
-  low_band_limit = 350000000;
-  high_band_limit = 400000000;
-  state.op_freq = 356000000;
-}
-
-void BAND60() {
-  digit2 = LED_N_6;
-  digit1 = LED_N_0;
-  low_band_limit = 535150000;
-  high_band_limit = 536650000;
-  state.op_freq = 535150000;
-}
-
-
-void BAND40() {
-  digit2 = LED_N_4;
-  digit1 = LED_N_0;
-  low_band_limit = 700000000;
-  high_band_limit = 730000000;
-  state.op_freq = 703000000;
-}
-
-void BAND30() {
-  digit2 = LED_N_3;
-  digit1 = LED_N_0;
-  low_band_limit = 1010000000;
-  high_band_limit = 1015000000;
-  state.op_freq = 1011800000;
-}
-
-void BAND20() {
-  digit2 = LED_N_2;
-  digit1 = LED_N_0;
-  low_band_limit = 1400000000;
-  high_band_limit = 1450000000;
-  state.op_freq = 1406000000;
-}
-
-void BAND17() {
-  digit2 = LED_N_1;
-  digit1 = LED_N_7;
-  low_band_limit = 1806800000;
-  high_band_limit = 1850000000;
-  state.op_freq = 1807000000;
-}
-
-void BAND15() {
-  digit2 = LED_N_1;
-  digit1 = LED_N_5;
-  low_band_limit = 2100000000u;
-  high_band_limit = 2150000000u;
-  state.op_freq = 2106000000u;
-}
-
-void BAND12() {
-  digit2 = LED_N_1;
-  digit1 = LED_N_2;
-  low_band_limit = 2489000000u;
-  high_band_limit = 2500000000u;
-  state.op_freq = 2490600000u;
-}
-
-void BAND10() {
-  digit2 = LED_N_1;
-  digit1 = LED_N_0;
-  low_band_limit = 2800000000u;
-  high_band_limit = 3000000000u;
-  state.op_freq = 2860000000u;
+void setup_band() {
+  low_band_limit = BAND_LIMITS_LOW[state.band];
+  high_band_limit = BAND_LIMITS_HIGH[state.band];
+  state.op_freq = BAND_OP_FREQS[state.band];
+  digit1 = LED_DIGITS[BAND_DIGITS_1[state.band]];
+  digit2 = LED_DIGITS[BAND_DIGITS_2[state.band]];
 }
 
 /*
