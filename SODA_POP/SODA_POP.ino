@@ -320,7 +320,7 @@ void loop() {
 //**************************************************************
 
 void keyer_mode() {
-  if (codespeedflag & CSflag == 1) {adjCSoff();}
+  if ((codespeedflag & CSflag) == 1) {adjCSoff();}
   if (bitRead(memoryflag,7) != 0) {store_mem();}
   else timebutton();
 }
@@ -507,8 +507,7 @@ void wr_CS() {
  */
 
 void RIT() {
-
-  if (ritflag & RIT_ON == 1){RIText();}
+  if ((ritflag & RIT_ON) == 1){RIText();}
   else RITenable();
 }
 
@@ -785,7 +784,7 @@ void send_memory0() {
     ++Eadr;
   }
   int_morseOut();
-  if (ritflag & RIT_ON == 1){RITdisplay();}
+  if ((ritflag & RIT_ON) == 1){RITdisplay();}
   else displayfreq();
 }
 
@@ -798,7 +797,7 @@ void send_memory1() {
     ++Eadr;
   }
   int_morseOut();
-  if (ritflag & RIT_ON == 1){RITdisplay();}
+  if ((ritflag & RIT_ON) == 1){RITdisplay();}
   else displayfreq();
 }
 
@@ -861,8 +860,7 @@ void inkeyer() {
 void  dash(){
 
   if (bitRead(memoryflag,7) != 1) { digitalWrite(TXEN, HIGH);}
-  code = code << 1;
-  code = code |= bit0set;
+  code = (code << 1) | bit0set;
   tone(A2, 600);
   state.key.dit = 0;
   ktimer2 = dashTime;
