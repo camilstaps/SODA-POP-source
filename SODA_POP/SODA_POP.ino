@@ -45,76 +45,19 @@
 #include <Wire.h>
 #include <si5351.h>
 
+#include "morse.h"
+#include "segments.h"
+#include "settings.h"
+
 Si5351 si5351;
 #define SLED4 9
 #define SLED3 10
 #define SLED2 11
 #define SLED1 12
 
-#define LED_N_0 0xeb
-#define LED_N_1 0x09
-#define LED_N_2 0xb3
-#define LED_N_3 0x9b
-#define LED_N_4 0x59
-#define LED_N_5 0xda
-#define LED_N_6 0x7a
-#define LED_N_7 0x89
-#define LED_N_8 0xfb
-#define LED_N_9 0xd9
-#define LED_r   0x30
-#define LED_neg 0x10
-#define LED_C   0xe2
-#define LED_n   0x38
-#define LED_E   0xf2
-#define LED_t   0x72
-#define LED_o   0x3a
-#define LED_d   0x3b
-#define LED_A   0xf9
-#define LED_L   0x62
-#define LED_P   0xf1
-
 const byte LED_DIGITS[] =
   { LED_N_0, LED_N_1, LED_N_2, LED_N_3, LED_N_4
   , LED_N_5, LED_N_6, LED_N_7, LED_N_8, LED_N_9};
-
-// Morse coding
-#define MA 0b101    // A
-#define MB 0b11000  // B
-#define MC 0b11010  // C
-#define MD 0b1100   // D
-#define ME 0b10     // E
-#define MF 0b10010  // F
-#define MG 0b1110   // G
-#define MH 0b10000  // H
-#define MI 0b100    // I
-#define MJ 0b10111  // J
-#define MK 0b1101   // K
-#define ML 0b10100  // L
-#define MM 0b111    // M
-#define MN 0b110    // N
-#define MO 0b1111   // O
-#define MP 0b10110  // P
-#define MQ 0b11101  // Q
-#define MR 0b1010   // R
-#define MS 0b1000   // S
-#define MT 0b11     // T
-#define MU 0b1001   // U
-#define MV 0b10001  // V
-#define MW 0b1011   // W
-#define MX 0b11001  // X
-#define MY 0b11011  // Y
-#define MZ 0b11100  // Z
-
-#define M0 0b111111 // 0
-#define M1 0b101111 // 1
-#define M2 0b100111 // 2
-#define M3 0b100011 // 3
-#define M4 0b100001 // 4
-#define M5 0b100000 // 5
-#define M6 0b110000 // 6
-#define M7 0b111000 // 7
-#define M8 0b111100 // 8
-#define M9 0b111110 // 9
 
 //flag definitions
 
@@ -215,7 +158,7 @@ struct state {
 
 struct state state;
 
-#define TX_FREQ (state.rit ? state.rit_tx_freq : state.op_freq)
+#define TX_FREQ(state) (state.rit ? state.rit_tx_freq : state.op_freq)
 
 // register names
 byte        codespeedflag = 0;
@@ -240,9 +183,6 @@ const int   DOTin = A1;
 int         stepSize;   // tuning rate pointer
 long int    stepK;      // temp storage of freq tuning step
 
-long int    Fstep50  = 5000 ;                // 10 Hz step
-long int    Fstep200 = 20000;
-
 //encoder
 
 volatile int c = HIGH;        // init state of pin A
@@ -257,7 +197,7 @@ ISR (TIMER1_COMPA_vect) {TIMER1_SERVICE_ROUTINE();}
 
 void setup() {
   state.key.mode = KEY_IAMBIC;
-  state.key.speed = 20;
+  state.key.speed = WPM_DEFAULT;
   state.key.timeout = 1;
   state.key.dash = 0;
   state.key.dit = 0;
@@ -286,9 +226,9 @@ void setup() {
 
   OCR1A = 238;
   TCCR1B = 0x0b;
-  TIMSK1 |= (1 << OCIE1A);
+  TIMSK1 |= 1 << OCIE1A;
   interrupts();
-  loadWPM(state.key.speed);                 // Fix speed at 20 WPM
+  loadWPM(state.key.speed);
 
   delay(100); //let things settle down a bit
 
@@ -300,7 +240,7 @@ void setup() {
 
   cal_data();    //load calibration data
   si5351.set_correction(cal_value); //correct the clock chip error
-  stepK = Fstep50 ; //default tuning rate
+  stepK = TUNE_STEP_DEFAULT;
   stepSize = 0;
   state.display[3] = LED_N_6;
   state.display[2] = LED_n;
@@ -494,7 +434,7 @@ void  nextFstep () {
 
   d1temp = state.display[0];
   state.display[0] = 0x00;
-  stepK = stepSize == 1 ? Fstep200 : Fstep50;
+  stepK = stepSize ? TUNE_STEP_ALT : TUNE_STEP_DEFAULT;
   delay(100);
   state.display[0] = d1temp;
 }
@@ -684,7 +624,7 @@ void encoder() {
 void PLLwrite() {
   si5351.set_freq(
       state.op_freq >= IFfreq ? state.op_freq - IFfreq: state.op_freq + IFfreq,
-      0ULL, SI5351_CLK0);
+      0ull, SI5351_CLK0);
 }
 
 /*
@@ -832,7 +772,7 @@ void inkeyer() {
   Wire.write(0xfd);
   Wire.endTransmission();
 
-  si5351.set_freq(TX_FREQ, 0ULL, SI5351_CLK1);
+  si5351.set_freq(TX_FREQ(state), 0ull, SI5351_CLK1);
 
   state.key.timer = state.key.dash_time * 2;
   state.key.timeout = 0;
@@ -947,7 +887,7 @@ void int_morseOut()
   Wire.write(REG+3);
   Wire.write(0xfd);
   Wire.endTransmission();
-  si5351.set_freq(TX_FREQ, 0ULL, SI5351_CLK1);
+  si5351.set_freq(TX_FREQ(state), 0ull, SI5351_CLK1);
 
   memoryflag &= MEM_EN_CL;
   for (int LOC = 0; LOC < 64; LOC++)
@@ -1011,7 +951,7 @@ void Straight_key(){
   Wire.write(0xfd);
   Wire.endTransmission();
 
-  si5351.set_freq(TX_FREQ, 0ULL, SI5351_CLK1);
+  si5351.set_freq(TX_FREQ(state), 0ull, SI5351_CLK1);
   tone(A2, 600);
 
   digitalWrite(TXEN, HIGH);
@@ -1101,7 +1041,7 @@ void calibration(){
   state.display[2] = LED_E;
   state.display[1] = LED_A;
   state.display[0] = 0x00;
-  si5351.set_freq(state.op_freq, 0ULL, SI5351_CLK1);
+  si5351.set_freq(state.op_freq, 0ull, SI5351_CLK1);
   Wire.beginTransmission(0x60); //turn off Tx clock output
   Wire.write(REG+3);
   Wire.write(0xfc);
@@ -1145,11 +1085,11 @@ void ADJ_DWN() {
 
 void calwrite() {
   si5351.set_correction(cal_value);
-  si5351.set_freq(1000000000, 0ULL, SI5351_CLK1);
+  si5351.set_freq(1000000000, 0ull, SI5351_CLK1);
 }
 
 void calwrite2() {
-  si5351.set_freq(state.op_freq, 0ULL, SI5351_CLK0);
+  si5351.set_freq(state.op_freq, 0ull, SI5351_CLK0);
   displayfreq();
 }
 
