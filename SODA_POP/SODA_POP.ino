@@ -8,7 +8,7 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  *
  *In order to compile <Si5351Arduino-master> must be in the Arduino libary. This probram is
@@ -23,8 +23,8 @@
 
  * A0 - dot paddle
  * A1 - dash paddle
- * A2   tone
- * A3   mute/qsk
+ * A2 - tone
+ * A3 - mute/qsk
  * A4 - SDA TWI
  * A5 - SCK TWI
  * 13 - TX enable
@@ -75,6 +75,11 @@ const byte LED_DIGITS[] =
 
 #define SI5351_CLK_RX SI5351_CLK0
 #define SI5351_CLK_TX SI5351_CLK1
+
+#define RX_ON_TX_ON   0xff
+#define RX_ON_TX_OFF  0xfe
+#define RX_OFF_TX_ON  0xfd
+#define RX_OFF_TX_OFF 0xfc
 
 #define IF_DEFAULT 491480000
 
@@ -164,7 +169,6 @@ struct state state;
 #define TX_FREQ(state) (state.rit ? state.rit_tx_freq : state.op_freq)
 
 // register names
-byte        sidtoneflag   = 0;
 byte        memoryflag = 0;
 byte        code=0x01;
 long        myMdata[64];
@@ -176,8 +180,8 @@ int         Eadr;
 byte EncoderFlag = 0;
 byte sw_inputs ;
 
-const int   MUTE =  A3;
-const int   TXEN =  13; // production A0
+const int   MUTE = A3;
+const int   TXEN = 13; // production A0
 const int   DASHin = A0;
 const int   DOTin = A1;
 
@@ -194,9 +198,13 @@ volatile int d = HIGH;        // make data val low
 unsigned long IFfreq;
 long          cal_value = 15000;
 
-ISR (TIMER1_COMPA_vect) {TIMER1_SERVICE_ROUTINE();}
+ISR (TIMER1_COMPA_vect)
+{
+  TIMER1_SERVICE_ROUTINE();
+}
 
-void setup() {
+void setup()
+{
   state.key.mode = KEY_IAMBIC;
   state.key.speed = WPM_DEFAULT;
   state.key.timeout = 1;
@@ -215,7 +223,7 @@ void setup() {
   digitalWrite(MUTE, HIGH);
   digitalWrite(TXEN, LOW);
   si5351.init(SI5351_CRYSTAL_LOAD_6PF, 0); //set PLL xtal load
-  enable_rx_tx(1, 0);
+  enable_rx_tx(RX_ON_TX_OFF);
 
   noInterrupts();
   TCCR1A = 0;
@@ -236,7 +244,7 @@ void setup() {
     calibration();
   }
 
-  cal_data();    //load calibration data
+  cal_data(); //load calibration data
   si5351.set_correction(cal_value); //correct the clock chip error
   stepK = TUNE_STEP_DEFAULT;
   stepSize = 0;
@@ -244,15 +252,16 @@ void setup() {
   state.display[2] = LED_n;
   setup_band();
   delay(1000);
-  displayfreq();
-  PLLwrite();
+  display_freq();
+  write_pll();
   digitalWrite(MUTE, LOW);
 
   if (digitalRead(DASHin) == LOW)
     state.key.mode = KEY_STRAIGHT;
 }
 
-void loop() {
+void loop()
+{
   // test for switch closed
   if (state.key.mode == KEY_IAMBIC)
     iambic();
@@ -275,16 +284,22 @@ void loop() {
   if (bitRead(sw_inputs,K_sw) == LOW)
     keyer_mode();
 
-  if (EncoderFlag == 2)
-    Tune_UP(); //test tune up flag
-  if (EncoderFlag == 1)
-    Tune_DWN(); //test tunr down flag
+  if (state.code_speed) {
+    if (EncoderFlag == 2)
+      cs_adjust(1);
+    if (EncoderFlag == 1)
+      cs_adjust(-1);
+  } else {
+    if (EncoderFlag == 2)
+      freq_adjust(stepK);
+    if (EncoderFlag == 1)
+      freq_adjust(-((int) stepK));
+  }
+  EncoderFlag = 0;
 }
-//**************************************************************
-//end of switch polling loop
-//**************************************************************
 
-void keyer_mode() {
+void keyer_mode()
+{
   if (state.code_speed)
     adjCSoff();
   if (bitRead(memoryflag,7))
@@ -293,13 +308,14 @@ void keyer_mode() {
     timebutton();
 }
 
-void timeRIT(){
+void timeRIT()
+{
   unsigned int duration = 0;
   unsigned long start_time = tcount;
 
-  if (bitRead(memoryflag,7) !=0) {  //this exits memory entry mode
+  if (bitRead(memoryflag,7) !=0) { //this exits memory entry mode
     memoryflag &= MEM_EN_CL;
-    displayfreq();
+    display_freq();
     digitalWrite(MUTE, LOW);
     do {delay(100);}
     while (bitRead(sw_inputs,R_sw) !=1);
@@ -347,7 +363,8 @@ void timeRIT(){
     RIT();
 }
 
-void timebutton() {
+void timebutton()
+{
   unsigned int duration = 0;
   unsigned long start_time = tcount;
 
@@ -373,135 +390,103 @@ void timebutton() {
     //this doesn't seem to be a problem when doing digital reads of a port pin instead.
   } while (bitRead(sw_inputs,K_sw) == 0); // wait until the bit goes high.
 
-  if (duration > 2000)
+  if (duration > 2000) {
     start_memory();
-  else if (duration > 500)
-    CodeSpeed();
-  else if (duration > 50)
+  } else if (duration > 500) {
+    state.code_speed = 1;
+    display_cs();
+  } else if (duration > 50) {
     int_memory_send();
+  }
 }
 
 //test for keyer mode, send message or store message
-void mode_test(){
-  if (bitRead(memoryflag,7) != 0) {store_mem();}
+void mode_test()
+{
+  if (bitRead(memoryflag,7))
+    store_mem();
   int_memory_send();
 }
 
 
-void iambic(){
-  if (digitalRead(DASHin) == LOW) {Ptest();}
-  if (digitalRead(DOTin) == LOW)  {Ptest();}
+void iambic()
+{
+  if (digitalRead(DASHin) == LOW)
+    Ptest();
+  if (digitalRead(DOTin) == LOW)
+    Ptest();
 }
 
 //test if paddle used for keying or code speed adj
-void Ptest() {
+void Ptest()
+{
   if (state.code_speed)
     CS_Pinput();
   else
     keyer();
 }
 
-//frequency or code speed adjust test
-
-void Tune_UP() {
-  EncoderFlag = 0;
-  if (state.code_speed)
-    CS_up();
-  else
-    FREQ_incerment();
-}
-
-void Tune_DWN() {
-  EncoderFlag = 0;
-  if (state.code_speed)
-    CS_dwn();
-  else
-    FREQ_decerment();
-}
-
-
 // adjust the operating frequency
-void FREQ_incerment() {
-  state.op_freq += stepK;  //add frequenc tuning step to frequency word
+void freq_adjust(int step)
+{
+  state.op_freq += step;
   if (state.op_freq > BAND_LIMITS_HIGH[state.band])
-    FREQ_decerment(); //band tuning limits
-  if (state.rit)
-    RITdisplay(); //test for RIT mode
-  else
-    displayfreq();
-  PLLwrite();
-}
-
-void FREQ_decerment() {
-  state.op_freq -= stepK;
+    state.op_freq = BAND_LIMITS_HIGH[state.band];
   if (state.op_freq < BAND_LIMITS_LOW[state.band])
-    FREQ_incerment();
+    state.op_freq = BAND_LIMITS_LOW[state.band];
   if (state.rit)
-    RITdisplay();
+    display_rit();
   else
-    displayfreq();
-  PLLwrite();
+    display_freq();
+  write_pll();
 }
-
 
 //toggle tuning step rate
-void  nextFstep () {
-  byte d1temp;
-
+void nextFstep()
+{
+  byte d1temp = state.display[0];
   stepSize = (stepSize + 1) % 2;
-
-  d1temp = state.display[0];
   state.display[0] = 0x00;
   stepK = stepSize ? TUNE_STEP_ALT : TUNE_STEP_DEFAULT;
   delay(100);
   state.display[0] = d1temp;
 }
 
-
 /*
  *change keyer code speed stuff here
  */
-
-void CodeSpeed(){
-  state.code_speed = 1;
-  wr_CS();
-}
-
-
 //clear code speed adjust mode
-void adjCSoff() {
+void adjCSoff()
+{
   state.code_speed = 0;
-  displayfreq();
+  display_freq();
 
-  do {delay(100);}
+  do
+    delay(100);
   while (bitRead(sw_inputs,K_sw)== LOW);
 }
 
 //change code speed with paddle
 void CS_Pinput() {
-  if (digitalRead(DASHin) == LOW) {CS_up();}
-  if (digitalRead(DOTin) == LOW)  {CS_dwn();}
+  if (digitalRead(DASHin) == LOW)
+    cs_adjust(1);
+  if (digitalRead(DOTin) == LOW)
+    cs_adjust(-1);
   delay(200);
 }
 
-
-void CS_up() {
-  if (state.key.speed >= 30)
-    return;
-  else
-    state.key.speed++;
-  wr_CS();
-}
-
-void  CS_dwn() {
+void cs_adjust(byte adjustment)
+{
+  state.key.speed += adjustment;
   if (state.key.speed <= 5)
-    return;
-  else
-    state.key.speed--;
-  wr_CS();
+    state.key.speed = 5;
+  else if (state.key.speed >= 30)
+    state.key.speed = 30;
+  display_cs();
 }
 
-void wr_CS() {
+void display_cs()
+{
   loadWPM(state.key.speed);
   state.display[0] = LED_DIGITS[state.key.speed % 10];
   state.display[1] = LED_DIGITS[state.key.speed / 10];
@@ -512,26 +497,21 @@ void wr_CS() {
  *
  * RIT mode stuff here
  */
-
-void RIT() {
-  if (state.rit){RIText();}
-  else RITenable();
+void RIT()
+{
+  if (state.rit) {
+    state.rit = 0;
+    state.op_freq = state.rit_tx_freq;
+    write_pll();
+    display_freq();
+  } else {
+    state.rit = 1;
+    state.rit_tx_freq = state.op_freq;
+    display_rit();
+  }
 }
 
-void RITenable(){
-  state.rit = 1;
-  state.rit_tx_freq = state.op_freq;
-  RITdisplay();
-}
-
-void RIText() {
-  state.rit = 0;
-  state.op_freq = state.rit_tx_freq;
-  PLLwrite();
-  displayfreq();
-}
-
-void RITdisplay()
+void display_rit()
 {
   unsigned long offset;
 
@@ -554,7 +534,8 @@ void RITdisplay()
 //hex value into the LED 7 seg map.
 ///////////////////////////////////////////////
 
-void displayfreq() {
+void display_freq()
+{
   // First divide by 100 to remove the fractional Hz digits
   unsigned long frequency = state.op_freq/100;
   // Then display the digits one by one
@@ -575,7 +556,8 @@ void TIMER1_SERVICE_ROUTINE()
 {
   ++tcount;
 
-  if (state.key.timer > 0 && --state.key.timer == 0)
+  if (state.key.timer > 0)
+    if (--state.key.timer == 0)
       state.key.timeout = 1;
 
   digitalWrite(SLED1, HIGH);
@@ -623,7 +605,8 @@ void TIMER1_SERVICE_ROUTINE()
 /*
  * encoder, test for direction only on 0 to 1 clock state change
  */
-void encoder() {
+void encoder()
+{
   if (cLast == 0){
     d = bitRead(sw_inputs, 0);
     if (d == LOW)
@@ -634,12 +617,11 @@ void encoder() {
   cLast = c; //store new state of clock
 }
 
-
 /*
  * output the frequency data to the clock chip.
  */
-
-void PLLwrite() {
+void write_pll()
+{
   si5351.set_freq(
       state.op_freq >= IFfreq ? state.op_freq - IFfreq: state.op_freq + IFfreq,
       0ull, SI5351_CLK0);
@@ -648,174 +630,194 @@ void PLLwrite() {
 /*
  * set up morse memory input
  */
-
-void start_memory() {
+void start_memory()
+{
   memoryflag |= MEM_EN ;
   digitalWrite(MUTE, HIGH);
-  code  = ME;
-  morseOut();
-  code = MM;
-  morseOut();
+  morseOut(ME);
+  morseOut(MM);
   clear_arry();
   if (state.key.mode == KEY_STRAIGHT) {
     memoryflag &= MEM_EN_CL;
-    displayfreq();
+    display_freq();
   }
 }
 
 /*
  * store the entered message
  */
-void store_mem(){
+void store_mem()
+{
   --LOC;
   myMdata[LOC] = 0xff;
 
-  for (int LOC = 0; LOC < 64; LOC++)
-  {code = myMdata[LOC];
-    if (code == 0x00) {delay(state.key.dit_time);}
-    if (code != 0xff) {morseOut();}
+  for (int LOC = 0; LOC < 64; LOC++) {
+    byte code = myMdata[LOC];
+    if (code == 0x00)
+      delay(state.key.dit_time);
+    if (code != 0xff)
+      morseOut(code);
   }
+
   select_loc();
 }
 
-void select_loc() {
-
+void select_loc()
+{
   do {
-    if (digitalRead(DASHin) == LOW) {store_memory0();}
-    if (digitalRead(DOTin) == LOW) {store_memory1();}
-    if  (bitRead(sw_inputs, K_sw) == LOW) {start_memory(); return;}
-  }
-  while (bitRead(memoryflag,7) !=0);
+    if (digitalRead(DASHin) == LOW)
+      store_memory0();
+    if (digitalRead(DOTin) == LOW)
+      store_memory1();
+    if (bitRead(sw_inputs, K_sw) == LOW) {
+      start_memory();
+      return;
+    }
+  } while (bitRead(memoryflag,7) !=0);
 }
 
-void store_memory0(){
+void store_memory0()
+{
   LOC=0;
   int Eadr = 16;
   for (int LOC = 0; LOC < 64; LOC++) {
-    code = myMdata[LOC];
-    EEPROM.write(Eadr, code);
+    EEPROM.write(Eadr, myMdata[LOC]);
     ++Eadr;
   }
-  code = MM;
-  morseOut();
-  code = M2;
-  morseOut();
+  morseOut(MM);
+  morseOut(M2);
 
   memoryflag &= MEM_EN_CL;
-  displayfreq();
+  display_freq();
   digitalWrite(MUTE, LOW);
 }
 
-void store_memory1(){
+void store_memory1()
+{
   LOC =0;
   int Eadr = 81;
   for (int LOC = 0; LOC < 64; LOC++) {
-    code = myMdata[LOC];
-    EEPROM.write(Eadr, code);
+    EEPROM.write(Eadr, myMdata[LOC]);
     ++Eadr;
   }
-  code  = MM;
-  morseOut();
-  code = M1;
-  morseOut();
+  morseOut(MM);
+  morseOut(M1);
   memoryflag &= MEM_EN_CL;
-  displayfreq();
+  display_freq();
   digitalWrite(MUTE, LOW);
 }
 
-void int_memory_send() {
+void int_memory_send()
+{
   memoryflag |= MEM_EN;
   if (state.key.mode == KEY_STRAIGHT) {
     sk_mem_send();
   } else {
     do {
-      if (digitalRead(DASHin) == LOW) { send_memory0();}
-      if (digitalRead(DOTin) == LOW) {  send_memory1();}
-      if (bitRead(sw_inputs,R_sw) !=1){memoryflag =0; displayfreq(); digitalWrite(MUTE, LOW);}
+      if (digitalRead(DASHin) == LOW)
+        send_memory0();
+      if (digitalRead(DOTin) == LOW)
+        send_memory1();
+      if (bitRead(sw_inputs,R_sw) !=1) {
+        memoryflag =0;
+        display_freq();
+        digitalWrite(MUTE, LOW);
+      }
     } while (bitRead(memoryflag, 7) !=0);
-  }
-  do delay(20);
+  } do delay(20);
   while (bitRead(sw_inputs, R_sw) == LOW);
 }
 
-void sk_mem_send() {
+void sk_mem_send()
+{
   do {
-    if (digitalRead(DOTin) == LOW) {  send_memory1();}
-    if (bitRead(sw_inputs,R_sw) !=1){memoryflag =0; displayfreq();}
-  }
-  while (bitRead(memoryflag, 7) !=0);
+    if (digitalRead(DOTin) == LOW)
+      send_memory1();
+    if (bitRead(sw_inputs,R_sw) !=1) {
+      memoryflag =0;
+      display_freq();
+    }
+  } while (bitRead(memoryflag, 7) !=0);
 }
 
-void send_memory0() {
+void send_memory0()
+{
   int Eadr = 16;
   LOC =0;
   for (int LOC = 0; LOC < 64; LOC++) {
-    code =  EEPROM.read(Eadr);
-    myMdata[LOC] = code;
+    myMdata[LOC] = EEPROM.read(Eadr);
     ++Eadr;
   }
   int_morseOut();
-  if (state.rit){RITdisplay();}
-  else displayfreq();
+  if (state.rit)
+    display_rit();
+  else
+    display_freq();
 }
 
-void send_memory1() {
+void send_memory1()
+{
   int Eadr = 81;
   LOC =0;
   for (int LOC = 0; LOC < 64; LOC++) {
-    code =  EEPROM.read(Eadr);
-    myMdata[LOC] = code;
+    myMdata[LOC] = EEPROM.read(Eadr);
     ++Eadr;
   }
   int_morseOut();
-  if (state.rit){RITdisplay();}
-  else displayfreq();
+  if (state.rit)
+    display_rit();
+  else
+    display_freq();
 }
 
 /*
  * start of keyer routine
  */
-
-
-void keyer(){
+void keyer()
+{
   code = 0x01;
   inkeyer();
 }
 
-void inkeyer() {
+void inkeyer()
+{
   digitalWrite(MUTE, HIGH);
 
-  enable_rx_tx(0, 1);
+  enable_rx_tx(RX_OFF_TX_ON);
   si5351.set_freq(TX_FREQ(state), 0ull, SI5351_CLK_TX);
 
   state.key.timer = state.key.dash_time * 2;
   state.key.timeout = 0;
   do {
-    if (digitalRead(DASHin) == LOW) {dash();} // dash
-    if (digitalRead(DOTin) == LOW) {dot();}  //dot
+    if (digitalRead(DASHin) == LOW)
+      dash();
+    if (digitalRead(DOTin) == LOW)
+      dot();
     if (state.key.dash)
       dash();
     if (state.key.dit)
       dot();
   } while (!state.key.timeout);
 
-  ++LOC ;
-  if (LOC == 64) {--LOC;}
+  if (++LOC == 64)
+    --LOC;
   myMdata[LOC] = code;
-
 
   state.key.timer = state.key.dash_time * 2;
   state.key.timeout = 0;
 
   do {
-    if (digitalRead(DASHin) == LOW) {keyer();} // dash
-    if (digitalRead(DOTin) == LOW) {keyer();}  //dot
+    if (digitalRead(DASHin) == LOW)
+      keyer();
+    if (digitalRead(DOTin) == LOW)
+      keyer();
   } while (!state.key.timeout);
 
-  ++LOC;
-  if (LOC == 64) {--LOC;}
+  if (++LOC == 64)
+    --LOC;
   myMdata[LOC] = 0x00;
-  enable_rx_tx(1, 0);
+
+  enable_rx_tx(RX_ON_TX_OFF);
   if (bitRead(memoryflag,7) != 1) {digitalWrite(MUTE, LOW);}
 }
 
@@ -864,7 +866,6 @@ void dot()
   do
     update_Dash_Latch();
   while (!state.key.timeout);
-
 }
 
 void update_Dot_Latch()
@@ -880,90 +881,83 @@ void update_Dash_Latch()
 }
 
 // clear the message memory bank by filling with 0xff
-
-void clear_arry() {
-  for (int LOC = 0; LOC < 64; LOC++) {myMdata[LOC] = 0xff;}
+void clear_arry()
+{
+  for (int LOC = 0; LOC < 64; LOC++)
+    myMdata[LOC] = 0xff;
 }
+
 /*
  * output a morse characer encoded 1 = dash, 0 = dot, 1 bit start bit added to start of string.
  * example, E = 0x02
  * send morse message
  *
  */
-
 void int_morseOut()
 {
   digitalWrite(MUTE, HIGH);
-  enable_rx_tx(0, 1);
+  enable_rx_tx(RX_OFF_TX_ON);
   si5351.set_freq(TX_FREQ(state), 0ull, SI5351_CLK1);
 
   memoryflag &= MEM_EN_CL;
-  for (int LOC = 0; LOC < 64; LOC++)
-  {code = myMdata[LOC];
-    if (code == 0x00) {delay(state.key.dit_time);}
-    if (code != 0xff) {morseOut();}
+  for (int LOC = 0; LOC < 64; LOC++) {
+    byte code = myMdata[LOC];
+    if (code == 0x00)
+      delay(state.key.dit_time);
+    if (code != 0xff)
+      morseOut(code);
   }
 
-  enable_rx_tx(1, 0);
+  enable_rx_tx(RX_ON_TX_OFF);
   digitalWrite(MUTE, LOW);
 }
 
-void morseOut() {
-  int i;
+void morseOut(byte code)
+{
+  char i;
 
   for (i = 7; i >= 0; i--)
     if (code & (1 << i))
       break;
 
   for (i--; i >= 0; i--) {
-    if (code & (1 << i))
-      dah();
-    else
-      dit();
+    if (bitRead(memoryflag,7) != 1)
+      digitalWrite(TXEN, HIGH);
+    tone(A2, 600);
+    delay((code & (1 << i)) ? state.key.dash_time : state.key.dit_time);
+    digitalWrite(TXEN, LOW);
+    noTone(A2);
+    delay(state.key.dit_time);
   }
+
   delay(state.key.dash_time);
 }
 
-void dah() {
-  if (bitRead(memoryflag,7) != 1) { digitalWrite(TXEN, HIGH);}
-  tone(A2, 600);
-  delay(state.key.dash_time);
-  digitalWrite(TXEN, LOW);
-  noTone(A2);
-  delay(state.key.dit_time);
-}
-
-void dit() {
-  if (bitRead(memoryflag,7) != 1) { digitalWrite(TXEN, HIGH);}
-  tone(A2, 600);
-  delay(state.key.dit_time);
-  digitalWrite(TXEN, LOW);
-  noTone(A2);
-  delay(state.key.dit_time);
-}
-
-void loadWPM (byte wpm) {
+void loadWPM (byte wpm)
+{
   state.key.dit_time = 1200u / ((unsigned int) wpm);
   state.key.dash_time = state.key.dit_time*3;
 }
 
 
-void Straight_key(){
+void Straight_key()
+{
   digitalWrite(MUTE, HIGH);
-  enable_rx_tx(0, 1);
+  enable_rx_tx(RX_OFF_TX_ON);
 
   si5351.set_freq(TX_FREQ(state), 0ull, SI5351_CLK1);
   tone(A2, 600);
 
   digitalWrite(TXEN, HIGH);
-  do delay(2);
+  do
+    delay(2);
   while (digitalRead(DOTin)== LOW);
 
   digitalWrite(TXEN, LOW);
   noTone(A2);
   delay(5);
 
-  enable_rx_tx(1, 0);
+  enable_rx_tx(RX_ON_TX_OFF);
   digitalWrite(MUTE, LOW);
 }
 
@@ -977,45 +971,47 @@ void Straight_key(){
  * Push keyer PB to advance to band select
  * Push keyer PB again to store and exit
  */
-
-
-void calibration(){
+void calibration()
+{
   long temp = cal_value;
   state.display[3] = LED_C;
   state.display[2] = LED_A;
   state.display[1] = LED_L;
   state.display[0] = 0x00;
-  calwrite();
-  enable_rx_tx(0, 1);
+  calibration_set_correction();
+  enable_rx_tx(RX_OFF_TX_ON);
   delay(500);
 
   while (bitRead(sw_inputs, K_sw) == HIGH) {
     if (EncoderFlag == 1)
-      ADJ_UP();
+      cal_value += 100;
     else if (EncoderFlag == 2)
-      ADJ_DWN();
+      cal_value -= 100;
+    EncoderFlag = 0;
+    calibration_set_correction();
   }
-
 
   temp = cal_value;
   EEPROM.write(4, temp);
   temp = cal_value >>8;
   EEPROM.write(5, temp);
 
-  enable_rx_tx(1, 0);
+  enable_rx_tx(RX_ON_TX_OFF);
 
   while (bitRead(sw_inputs, K_sw) == LOW)
     delay(100);
   digitalWrite(MUTE, LOW);
   state.op_freq = IF_DEFAULT;
-  calwrite2();
-  displayfreq();
+  calibration_set_op_freq();
+  display_freq();
   delay(500);
   while (bitRead(sw_inputs, K_sw) == HIGH) {
-    if  (EncoderFlag == 2)
-      ADJ_UP_f();
-    if  (EncoderFlag == 1)
-      ADJ_DWN_f();
+    if (EncoderFlag == 2)
+      state.op_freq += 1000;
+    if (EncoderFlag == 1)
+      state.op_freq -= 1000;
+    EncoderFlag = 0;
+    calibration_set_op_freq();
   }
 
   IFfreq = state.op_freq;
@@ -1035,52 +1031,31 @@ void calibration(){
   state.display[1] = LED_A;
   state.display[0] = 0x00;
   si5351.set_freq(state.op_freq, 0ull, SI5351_CLK1);
-  enable_rx_tx(0, 0);
+  enable_rx_tx(RX_OFF_TX_OFF);
 
   while (bitRead(sw_inputs, K_sw) == HIGH)
     delay(100);
-  enable_rx_tx(1, 0);
-  displayfreq();
+  enable_rx_tx(RX_ON_TX_OFF);
+  display_freq();
   while (bitRead(sw_inputs, K_sw) == LOW)
     delay(100);
   delay(500);
 }
 
-void ADJ_UP_f(){
-  state.op_freq += 1000;
-  EncoderFlag = 0;
-  calwrite2();
-}
-
-void ADJ_DWN_f() {
-  state.op_freq -= 1000;
-  EncoderFlag = 0;
-  calwrite2();
-}
-
-void ADJ_UP(){
-  cal_value = cal_value + 100;
-  EncoderFlag = 0;
-  calwrite();
-}
-
-void ADJ_DWN() {
-  cal_value = cal_value - 100;
-  EncoderFlag = 0;
-  calwrite();
-}
-
-void calwrite() {
+void calibration_set_correction()
+{
   si5351.set_correction(cal_value);
   si5351.set_freq(1000000000, 0ull, SI5351_CLK1);
 }
 
-void calwrite2() {
+void calibration_set_op_freq()
+{
   si5351.set_freq(state.op_freq, 0ull, SI5351_CLK0);
-  displayfreq();
+  display_freq();
 }
 
-void cal_data(){
+void cal_data()
+{
   unsigned long temp = 0;
 
   temp = EEPROM.read(3);
@@ -1091,11 +1066,11 @@ void cal_data(){
   IFfreq = IFfreq << 8;
   temp = EEPROM.read(1);
   IFfreq = IFfreq + temp;
-  IFfreq = IFfreq <<8;
-  temp =  EEPROM.read(0);
+  IFfreq = IFfreq << 8;
+  temp = EEPROM.read(0);
   IFfreq = IFfreq + temp;
 
-  temp =0;
+  temp = 0;
   temp = EEPROM.read(5);
   cal_value = temp;
   cal_value = cal_value <<8;
@@ -1103,7 +1078,8 @@ void cal_data(){
   cal_value = cal_value + temp;
 }
 
-void changeBand(){
+void changeBand()
+{
   state.display[3] = LED_N_6;
   state.display[2] = LED_n;
   setup_band();
@@ -1111,20 +1087,21 @@ void changeBand(){
   while (bitRead(sw_inputs, K_sw) == LOW)
     delay(100);
 
-  do {
-    if (bitRead(sw_inputs,R_sw) !=1) {nextband();}
-  }
+  do
+    if (bitRead(sw_inputs,R_sw) !=1)
+      nextband();
   while (bitRead(sw_inputs,K_sw) !=0);
-  displayfreq();
-  PLLwrite();
+  display_freq();
+  write_pll();
   EEPROM.write(6, (byte) state.band);
 
-  do {delay(50);}
+  do
+    delay(50);
   while (bitRead(sw_inputs,K_sw) !=1);
 }
 
-
-void nextband() {
+void nextband()
+{
   state.band = (enum band) (((byte) state.band) + 1);
   if (state.band >= LAST_BAND)
     state.band = (enum band) 0;
@@ -1134,23 +1111,23 @@ void nextband() {
   while (bitRead(sw_inputs,R_sw) !=1);
 }
 
-
-void setup_band() {
+void setup_band()
+{
   state.op_freq = BAND_OP_FREQS[state.band];
   state.display[0] = LED_DIGITS[BAND_DIGITS_1[state.band]];
   state.display[1] = LED_DIGITS[BAND_DIGITS_2[state.band]];
 }
 
-void enable_rx_tx(byte rx, byte tx) {
+void enable_rx_tx(byte option)
+{
   Wire.beginTransmission(0x60);
   Wire.write(3);
-  Wire.write(0xfc
-      | (rx ? 0x02 : 0x00)
-      | (tx ? 0x01 : 0x01));
+  Wire.write(option);
   Wire.endTransmission();
 }
 
-void ee_erase() {
+void ee_erase()
+{
   for (byte i=0; i<=7; i++)
     EEPROM.write(i, 0xff);
   state.display[3] = LED_d;
