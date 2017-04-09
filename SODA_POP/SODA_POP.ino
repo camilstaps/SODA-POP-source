@@ -137,6 +137,29 @@ const unsigned long BAND_OP_FREQS[] =
   , 2860000000u
   };
 
+struct inputs {
+  union {
+    struct {
+      byte encoder_data:1;
+      byte encoder_clock:1;
+      byte encoder:1;
+      byte unused:3;
+      byte rit:1;
+      byte keyer:1;
+    } pins;
+    byte port;
+  } buttons;
+
+  union {
+    struct {
+      byte up:1;
+      byte down:1;
+    };
+    byte value:2;
+  } encoder;
+  byte encoder_last_clock:1;
+};
+
 #define KEY_IAMBIC 0
 #define KEY_STRAIGHT 1
 
@@ -162,6 +185,7 @@ struct state {
   byte code_speed:1;
 
   byte display[4];
+  struct inputs inputs;
 };
 
 struct state state;
@@ -177,9 +201,6 @@ unsigned long tcount;
 byte        LOC = 0;
 int         Eadr;
 
-byte EncoderFlag = 0;
-byte sw_inputs ;
-
 const int   MUTE = A3;
 const int   TXEN = 13; // production A0
 const int   DASHin = A0;
@@ -188,12 +209,6 @@ const int   DOTin = A1;
 //frequency tuning
 int         stepSize;   // tuning rate pointer
 long int    stepK;      // temp storage of freq tuning step
-
-//encoder
-
-volatile int c = HIGH;        // init state of pin A
-volatile int cLast = HIGH;    // init last val the same, low
-volatile int d = HIGH;        // make data val low
 
 unsigned long IFfreq;
 long          cal_value = 15000;
@@ -269,33 +284,33 @@ void loop()
     Straight_key();
 
   // Encoder switch
-  if (bitRead(sw_inputs, E_sw) == LOW)
-    nextFstep(); // debounce, wait for switch release
-  while (bitRead(sw_inputs, E_sw) == LOW)
-    delay(10);
+  if (state.inputs.buttons.pins.encoder)
+    nextFstep();
+  while (state.inputs.buttons.pins.encoder)
+    delay(10); // debounce, wait for switch release
 
   // RIT switch
-  if (bitRead(sw_inputs, R_sw) == LOW)
-     timeRIT(); //debounce, wait for switch release
-  while (bitRead(sw_inputs, R_sw) == LOW)
-    delay(10);
+  if (state.inputs.buttons.pins.rit)
+     timeRIT();
+  while (state.inputs.buttons.pins.rit)
+    delay(10); //debounce, wait for switch release
 
   // Keyer switch
-  if (bitRead(sw_inputs,K_sw) == LOW)
+  if (state.inputs.buttons.pins.keyer)
     keyer_mode();
 
   if (state.code_speed) {
-    if (EncoderFlag == 2)
+    if (state.inputs.encoder.up)
       cs_adjust(1);
-    if (EncoderFlag == 1)
+    if (state.inputs.encoder.down)
       cs_adjust(-1);
   } else {
-    if (EncoderFlag == 2)
+    if (state.inputs.encoder.up)
       freq_adjust(stepK);
-    if (EncoderFlag == 1)
+    if (state.inputs.encoder.down)
       freq_adjust(-((int) stepK));
   }
-  EncoderFlag = 0;
+  state.inputs.encoder.value = 0;
 }
 
 void keyer_mode()
@@ -317,8 +332,9 @@ void timeRIT()
     memoryflag &= MEM_EN_CL;
     display_freq();
     digitalWrite(MUTE, LOW);
-    do {delay(100);}
-    while (bitRead(sw_inputs,R_sw) !=1);
+    do
+      delay(100);
+    while (state.inputs.buttons.pins.rit);
   }
 
   do {
@@ -346,7 +362,7 @@ void timeRIT()
     }
 #endif
     delay(1);
-  } while (!bitRead(sw_inputs,R_sw));
+  } while (state.inputs.buttons.pins.rit);
 
 #ifdef OPT_ERASE_EEPROM
   if (duration > 8000)
@@ -388,7 +404,7 @@ void timebutton()
     }
     delay(1); //for some reason a delay call has to be done when doing bit read flag tests or it locks up
     //this doesn't seem to be a problem when doing digital reads of a port pin instead.
-  } while (bitRead(sw_inputs,K_sw) == 0); // wait until the bit goes high.
+  } while (state.inputs.buttons.pins.keyer); // wait until the bit goes high.
 
   if (duration > 2000) {
     start_memory();
@@ -463,7 +479,7 @@ void adjCSoff()
 
   do
     delay(100);
-  while (bitRead(sw_inputs,K_sw)== LOW);
+  while (state.inputs.buttons.pins.keyer);
 }
 
 //change code speed with paddle
@@ -568,11 +584,18 @@ void TIMER1_SERVICE_ROUTINE()
   DDRD = 0x00;
   PORTD= 0Xff;
   digitalWrite(8, LOW);
-  for (int i = 0; i < 10; i++) sw_inputs = PIND; // debounce
+  for (byte i = 0; i < 10; i++)
+    state.inputs.buttons.port = ~PIND; // debounce
   digitalWrite(8, HIGH);
-  c = bitRead(sw_inputs,1); //read encoder clock bit
-  if (c != cLast)
-    encoder(); //call if changed
+  if (state.inputs.buttons.pins.encoder_clock != state.inputs.encoder_last_clock) {
+    if (!state.inputs.encoder_last_clock) {
+      if (state.inputs.buttons.pins.encoder_data)
+        state.inputs.encoder.down = 1;
+      else
+        state.inputs.encoder.up = 1;
+    }
+    state.inputs.encoder_last_clock = state.inputs.buttons.pins.encoder_clock;
+  }
   DDRD = 0xff;
 
   digit_counter = (digit_counter + 1) % 4;
@@ -600,21 +623,6 @@ void TIMER1_SERVICE_ROUTINE()
       digitalWrite(SLED4, LOW);
       break;
   }
-}
-
-/*
- * encoder, test for direction only on 0 to 1 clock state change
- */
-void encoder()
-{
-  if (cLast == 0){
-    d = bitRead(sw_inputs, 0);
-    if (d == LOW)
-      EncoderFlag = 2; //if low
-    else
-      EncoderFlag = 1; //if high
-  }
-  cLast = c; //store new state of clock
 }
 
 /*
@@ -669,7 +677,7 @@ void select_loc()
       store_memory0();
     if (digitalRead(DOTin) == LOW)
       store_memory1();
-    if (bitRead(sw_inputs, K_sw) == LOW) {
+    if (state.inputs.buttons.pins.keyer) {
       start_memory();
       return;
     }
@@ -718,14 +726,14 @@ void int_memory_send()
         send_memory0();
       if (digitalRead(DOTin) == LOW)
         send_memory1();
-      if (bitRead(sw_inputs,R_sw) !=1) {
+      if (state.inputs.buttons.pins.rit) {
         memoryflag =0;
         display_freq();
         digitalWrite(MUTE, LOW);
       }
     } while (bitRead(memoryflag, 7) !=0);
   } do delay(20);
-  while (bitRead(sw_inputs, R_sw) == LOW);
+  while (state.inputs.buttons.pins.rit);
 }
 
 void sk_mem_send()
@@ -733,7 +741,7 @@ void sk_mem_send()
   do {
     if (digitalRead(DOTin) == LOW)
       send_memory1();
-    if (bitRead(sw_inputs,R_sw) !=1) {
+    if (state.inputs.buttons.pins.rit) {
       memoryflag =0;
       display_freq();
     }
@@ -982,12 +990,12 @@ void calibration()
   enable_rx_tx(RX_OFF_TX_ON);
   delay(500);
 
-  while (bitRead(sw_inputs, K_sw) == HIGH) {
-    if (EncoderFlag == 1)
-      cal_value += 100;
-    else if (EncoderFlag == 2)
+  while (!state.inputs.buttons.pins.keyer) {
+    if (state.inputs.encoder.up)
       cal_value -= 100;
-    EncoderFlag = 0;
+    else if (state.inputs.encoder.down)
+      cal_value += 100;
+    state.inputs.encoder.value = 0;
     calibration_set_correction();
   }
 
@@ -998,19 +1006,19 @@ void calibration()
 
   enable_rx_tx(RX_ON_TX_OFF);
 
-  while (bitRead(sw_inputs, K_sw) == LOW)
+  while (state.inputs.buttons.pins.keyer)
     delay(100);
   digitalWrite(MUTE, LOW);
   state.op_freq = IF_DEFAULT;
   calibration_set_op_freq();
   display_freq();
   delay(500);
-  while (bitRead(sw_inputs, K_sw) == HIGH) {
-    if (EncoderFlag == 2)
+  while (!state.inputs.buttons.pins.keyer) {
+    if (state.inputs.encoder.up)
       state.op_freq += 1000;
-    if (EncoderFlag == 1)
+    if (state.inputs.encoder.down)
       state.op_freq -= 1000;
-    EncoderFlag = 0;
+    state.inputs.encoder.value = 0;
     calibration_set_op_freq();
   }
 
@@ -1024,6 +1032,8 @@ void calibration()
   temp = state.op_freq >> 24;
   EEPROM.write(3, temp);
 
+  while (state.inputs.buttons.pins.keyer)
+    delay(100);
   changeBand();
 
   state.display[3] = LED_P;
@@ -1033,11 +1043,11 @@ void calibration()
   si5351.set_freq(state.op_freq, 0ull, SI5351_CLK1);
   enable_rx_tx(RX_OFF_TX_OFF);
 
-  while (bitRead(sw_inputs, K_sw) == HIGH)
+  while (!state.inputs.buttons.pins.keyer)
     delay(100);
   enable_rx_tx(RX_ON_TX_OFF);
   display_freq();
-  while (bitRead(sw_inputs, K_sw) == LOW)
+  while (state.inputs.buttons.pins.keyer)
     delay(100);
   delay(500);
 }
@@ -1084,20 +1094,18 @@ void changeBand()
   state.display[2] = LED_n;
   setup_band();
 
-  while (bitRead(sw_inputs, K_sw) == LOW)
-    delay(100);
-
   do
-    if (bitRead(sw_inputs,R_sw) !=1)
+    if (state.inputs.buttons.pins.rit)
       nextband();
-  while (bitRead(sw_inputs,K_sw) !=0);
+  while (!state.inputs.buttons.pins.keyer);
+
   display_freq();
   write_pll();
   EEPROM.write(6, (byte) state.band);
 
   do
     delay(50);
-  while (bitRead(sw_inputs,K_sw) !=1);
+  while (state.inputs.buttons.pins.keyer);
 }
 
 void nextband()
@@ -1108,7 +1116,7 @@ void nextband()
   setup_band();
   do
     delay(50);
-  while (bitRead(sw_inputs,R_sw) !=1);
+  while (state.inputs.buttons.pins.rit);
 }
 
 void setup_band()
