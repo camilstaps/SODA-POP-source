@@ -142,21 +142,21 @@ struct inputs {
     struct {
       byte encoder_data:1;
       byte encoder_clock:1;
-      byte encoder:1;
+      byte encoder_button:1;
       byte unused:3;
       byte rit:1;
       byte keyer:1;
-    } pins;
+    };
     byte port;
-  } buttons;
+  };
 
   union {
     struct {
       byte up:1;
       byte down:1;
     };
-    byte value:2;
-  } encoder;
+    byte encoder_value:2;
+  };
   byte encoder_last_clock:1;
 };
 
@@ -307,23 +307,23 @@ void loop()
       break;
   }
 
-  state.inputs.encoder.value = 0;
+  state.inputs.encoder_value = 0;
 }
 
 void loop_default()
 {
   unsigned int duration;
   // Tuning with the rotary encoder
-  if (state.inputs.encoder.up) {
+  if (state.inputs.up) {
     freq_adjust(stepK);
-  } else if (state.inputs.encoder.down) {
+  } else if (state.inputs.down) {
     freq_adjust(-((int) stepK));
-  } else if (state.inputs.buttons.pins.encoder) {
+  } else if (state.inputs.encoder_button) {
     nextFstep();
-    while (state.inputs.buttons.pins.encoder)
+    while (state.inputs.encoder_button)
       delay(50);
   // Keyer switch for memory and code speed
-  } else if (state.inputs.buttons.pins.keyer) {
+  } else if (state.inputs.keyer) {
     duration = time_keyer();
     if (duration > 2000) {
       state.state = S_MEM_ENTER_WAIT;
@@ -336,7 +336,7 @@ void loop_default()
       invalidate_display();
     }
   // RIT switch for RIT, changing band, calibration and erasing EEPROM
-  } else if (state.inputs.buttons.pins.rit) {
+  } else if (state.inputs.rit) {
     duration = time_rit();
 #ifdef OPT_ERASE_EEPROM
     if (duration > 8000)
@@ -377,9 +377,9 @@ void loop_default()
 void loop_adjust_cs()
 {
   // Rotary encoder
-  if (state.inputs.encoder.up) {
+  if (state.inputs.up) {
     adjust_cs(1);
-  } else if (state.inputs.encoder.down) {
+  } else if (state.inputs.down) {
     adjust_cs(-1);
   // Paddle
   } else if (!digitalRead(DASHin)) {
@@ -389,10 +389,10 @@ void loop_adjust_cs()
     adjust_cs(-1);
     delay(200);
   // Exiting
-  } else if (state.inputs.buttons.pins.keyer) {
+  } else if (state.inputs.keyer) {
     state.state = S_DEFAULT;
     invalidate_display();
-    while (state.inputs.buttons.pins.keyer)
+    while (state.inputs.keyer)
       delay(50);
   }
 }
@@ -400,12 +400,12 @@ void loop_adjust_cs()
 void loop_change_band()
 {
   // Change with rotary encoder
-  if (state.inputs.encoder.up) {
+  if (state.inputs.up) {
     nextband(1);
-  } else if (state.inputs.encoder.down) {
+  } else if (state.inputs.down) {
     nextband(0);
   // Save with keyer
-  } else if (state.inputs.buttons.pins.keyer) {
+  } else if (state.inputs.keyer) {
     store_band();
 
     if (state.state == S_CALIBRATION_CHANGE_BAND) {
@@ -418,14 +418,14 @@ void loop_change_band()
 
     invalidate_display();
 
-    while (state.inputs.buttons.pins.keyer)
+    while (state.inputs.keyer)
       delay(50);
   }
 }
 
 void loop_mem_enter()
 {
-  if (state.inputs.buttons.pins.keyer)
+  if (state.inputs.keyer)
     state.state = S_MEM_ENTER_REVIEW;
 }
 
@@ -439,10 +439,10 @@ void loop_mem_send_wait()
     send_memory1();
     state.state = S_MEM_SEND_TX;
   // Keyer exits
-  } else if (state.inputs.buttons.pins.keyer) {
+  } else if (state.inputs.keyer) {
     state.state = S_DEFAULT;
     invalidate_display();
-    while (state.inputs.buttons.pins.keyer)
+    while (state.inputs.keyer)
       delay(50);
   }
 }
@@ -457,7 +457,7 @@ void loop_error()
 
 void loop_calibration_correction()
 {
-  if (state.inputs.buttons.pins.keyer) {
+  if (state.inputs.keyer) {
     EEPROM.write(4, cal_value);
     EEPROM.write(5, cal_value >> 8);
 
@@ -467,12 +467,12 @@ void loop_calibration_correction()
     invalidate_display();
     enable_rx_tx(RX_ON_TX_OFF);
 
-    while (state.inputs.buttons.pins.keyer)
+    while (state.inputs.keyer)
       delay(50);
-  } else if (state.inputs.encoder.up) {
+  } else if (state.inputs.up) {
     cal_value -= 100;
     calibration_set_correction();
-  } else if (state.inputs.encoder.down) {
+  } else if (state.inputs.down) {
     cal_value += 100;
     calibration_set_correction();
   }
@@ -480,7 +480,7 @@ void loop_calibration_correction()
 
 void loop_calibration_peak_if()
 {
-  if (state.inputs.buttons.pins.keyer) {
+  if (state.inputs.keyer) {
     IFfreq = state.op_freq;
     EEPROM.write(0, state.op_freq);
     EEPROM.write(1, state.op_freq >> 8);
@@ -491,12 +491,12 @@ void loop_calibration_peak_if()
     invalidate_frequencies();
     invalidate_display();
 
-    while (state.inputs.buttons.pins.keyer)
+    while (state.inputs.keyer)
       delay(50);
-  } else if (state.inputs.encoder.up) {
+  } else if (state.inputs.up) {
     state.op_freq += 1000;
     invalidate_frequencies();
-  } else if (state.inputs.encoder.down) {
+  } else if (state.inputs.down) {
     state.op_freq -= 1000;
     invalidate_frequencies();
   }
@@ -504,11 +504,11 @@ void loop_calibration_peak_if()
 
 void loop_calibration_peak_rx()
 {
-  if (state.inputs.buttons.pins.keyer) {
+  if (state.inputs.keyer) {
     state.state = S_DEFAULT;
     invalidate_display();
 
-    while (state.inputs.buttons.pins.keyer)
+    while (state.inputs.keyer)
       delay(50);
   }
 }
@@ -601,7 +601,7 @@ unsigned int time_rit()
     }
 #endif
     delay(1);
-  } while (state.inputs.buttons.pins.rit);
+  } while (state.inputs.rit);
 
   return duration;
 }
@@ -631,7 +631,7 @@ unsigned int time_keyer()
     }
     delay(1); //for some reason a delay call has to be done when doing bit read flag tests or it locks up
     //this doesn't seem to be a problem when doing digital reads of a port pin instead.
-  } while (state.inputs.buttons.pins.keyer); // wait until the bit goes high.
+  } while (state.inputs.keyer); // wait until the bit goes high.
 
   return duration;
 }
@@ -760,16 +760,16 @@ void TIMER1_SERVICE_ROUTINE()
   PORTD= 0Xff;
   digitalWrite(8, LOW);
   for (byte i = 0; i < 10; i++)
-    state.inputs.buttons.port = ~PIND; // debounce
+    state.inputs.port = ~PIND; // debounce
   digitalWrite(8, HIGH);
-  if (state.inputs.buttons.pins.encoder_clock != state.inputs.encoder_last_clock) {
+  if (state.inputs.encoder_clock != state.inputs.encoder_last_clock) {
     if (!state.inputs.encoder_last_clock) {
-      if (state.inputs.buttons.pins.encoder_data)
-        state.inputs.encoder.down = 1;
+      if (state.inputs.encoder_data)
+        state.inputs.down = 1;
       else
-        state.inputs.encoder.up = 1;
+        state.inputs.up = 1;
     }
-    state.inputs.encoder_last_clock = state.inputs.buttons.pins.encoder_clock;
+    state.inputs.encoder_last_clock = state.inputs.encoder_clock;
   }
   DDRD = 0xff;
 
@@ -842,7 +842,7 @@ void select_loc()
       store_memory0();
     if (digitalRead(DOTin) == LOW)
       store_memory1();
-    if (state.inputs.buttons.pins.keyer) {
+    if (state.inputs.keyer) {
       start_memory();
       return;
     }
@@ -891,14 +891,14 @@ void int_memory_send()
         send_memory0();
       if (digitalRead(DOTin) == LOW)
         send_memory1();
-      if (state.inputs.buttons.pins.rit) {
+      if (state.inputs.rit) {
         memoryflag =0;
         display_freq();
         digitalWrite(MUTE, LOW);
       }
     } while (bitRead(memoryflag, 7) !=0);
   } do delay(20);
-  while (state.inputs.buttons.pins.rit);
+  while (state.inputs.rit);
 }
 
 void sk_mem_send()
@@ -906,7 +906,7 @@ void sk_mem_send()
   do {
     if (digitalRead(DOTin) == LOW)
       send_memory1();
-    if (state.inputs.buttons.pins.rit) {
+    if (state.inputs.rit) {
       memoryflag =0;
       display_freq();
     }
@@ -1170,9 +1170,9 @@ void changeBand()
   setup_band();
 
   do
-    if (state.inputs.buttons.pins.rit)
+    if (state.inputs.rit)
       nextband(1);
-  while (!state.inputs.buttons.pins.keyer);
+  while (!state.inputs.keyer);
 
   display_freq();
   invalidate_frequencies();
@@ -1180,7 +1180,7 @@ void changeBand()
 
   do
     delay(50);
-  while (state.inputs.buttons.pins.keyer);
+  while (state.inputs.keyer);
 }
 
 void nextband(byte up)
@@ -1198,7 +1198,7 @@ void nextband(byte up)
 
   do
     delay(50);
-  while (state.inputs.buttons.pins.rit);
+  while (state.inputs.rit);
 
   invalidate_display();
   invalidate_frequencies();
