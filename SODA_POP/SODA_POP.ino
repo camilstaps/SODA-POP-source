@@ -216,7 +216,6 @@ long        myMdata[64];
 unsigned long tcount;
 
 byte        LOC = 0;
-int         Eadr;
 
 const int   MUTE = A3;
 const int   TXEN = 13; // production A0
@@ -1247,6 +1246,7 @@ void invalidate_frequencies()
   si5351.set_freq(TX_FREQ(state), 0ull, SI5351_CLK_TX);
 }
 
+#ifdef OPT_ERASE_EEPROM
 void ee_erase()
 {
   for (byte i=0; i<=7; i++)
@@ -1256,6 +1256,7 @@ void ee_erase()
   state.display[1] = LED_n;
   state.display[0] = LED_E;
 }
+#endif
 
 void error()
 {
