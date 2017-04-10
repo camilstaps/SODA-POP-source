@@ -183,7 +183,10 @@ enum state : byte {
   S_MEM_ENTER_WAIT,
   S_MEM_ENTER,
   S_MEM_ENTER_REVIEW,
-  S_CALIBRATION,
+  S_CALIBRATION_CORRECTION,
+  S_CALIBRATION_PEAK_IF,
+  S_CALIBRATION_CHANGE_BAND,
+  S_CALIBRATION_PEAK_RX,
   S_ERROR
 };
 
@@ -265,19 +268,16 @@ void setup()
   interrupts();
   loadWPM(state.key.speed);
 
-  delay(100); //let things settle down a bit
-
   state.band = (enum band) EEPROM.read(6); // check for operating band
   if (state.band == BAND_UNKNOWN) {
     state.band = (enum band) 0;
-    calibration();
+    state.state = S_CALIBRATION_CORRECTION;
   }
 
   cal_data(); //load calibration data
   si5351.set_correction(cal_value); //correct the clock chip error
   stepK = TUNE_STEP_DEFAULT;
   stepSize = 0;
-  display_band();
   setup_band();
   delay(1000);
   digitalWrite(MUTE, LOW);
@@ -290,15 +290,19 @@ void setup()
 void loop()
 {
   switch (state.state) {
-    case S_DEFAULT:          loop_default(); break;
-    case S_ADJUST_CS:        loop_adjust_cs(); break;
-    case S_CHANGE_BAND:      loop_change_band(); break;
-    case S_MEM_ENTER_WAIT:   break;
-    case S_MEM_ENTER:        loop_mem_enter(); break;
-    case S_MEM_ENTER_REVIEW: break;
-    case S_MEM_SEND_WAIT:    loop_mem_send_wait(); break;
-    case S_MEM_SEND_TX:      break;
-    case S_ERROR:            loop_error(); break;
+    case S_DEFAULT:                 loop_default(); break;
+    case S_ADJUST_CS:               loop_adjust_cs(); break;
+    case S_CHANGE_BAND:             loop_change_band(); break;
+    case S_MEM_ENTER_WAIT:          break;
+    case S_MEM_ENTER:               loop_mem_enter(); break;
+    case S_MEM_ENTER_REVIEW:        break;
+    case S_MEM_SEND_WAIT:           loop_mem_send_wait(); break;
+    case S_MEM_SEND_TX:             break;
+    case S_CALIBRATION_CORRECTION:  loop_calibration_correction(); break;
+    case S_CALIBRATION_PEAK_IF:     loop_calibration_peak_if(); break;
+    case S_CALIBRATION_CHANGE_BAND: loop_change_band(); break;
+    case S_CALIBRATION_PEAK_RX:     loop_calibration_peak_rx(); break;
+    case S_ERROR:                   loop_error(); break;
     default:
       error();
       break;
@@ -341,9 +345,10 @@ void loop_default()
     else
 #endif
     if (duration > 5000) {
-      state.state = S_CALIBRATION;
-      calibration();
-      state.state = S_DEFAULT;
+      state.state = S_CALIBRATION_CORRECTION;
+      invalidate_display();
+      calibration_set_correction();
+      enable_rx_tx(RX_OFF_TX_ON);
     }
 #ifdef OPT_BAND_SELECT
     else if (duration > 2000) {
@@ -403,8 +408,17 @@ void loop_change_band()
   // Save with keyer
   } else if (state.inputs.buttons.pins.keyer) {
     store_band();
-    state.state = S_DEFAULT;
+
+    if (state.state == S_CALIBRATION_CHANGE_BAND) {
+      state.state = S_CALIBRATION_PEAK_RX;
+      invalidate_frequencies();
+      enable_rx_tx(RX_ON_TX_OFF);
+    } else {
+      state.state = S_DEFAULT;
+    }
+
     invalidate_display();
+
     while (state.inputs.buttons.pins.keyer)
       delay(50);
   }
@@ -442,6 +456,64 @@ void loop_error()
   delay(450);
 }
 
+void loop_calibration_correction()
+{
+  if (state.inputs.buttons.pins.keyer) {
+    EEPROM.write(4, cal_value);
+    EEPROM.write(5, cal_value >> 8);
+
+    state.state = S_CALIBRATION_PEAK_IF;
+    state.op_freq = IF_DEFAULT;
+    invalidate_frequencies();
+    invalidate_display();
+    enable_rx_tx(RX_ON_TX_OFF);
+
+    while (state.inputs.buttons.pins.keyer)
+      delay(50);
+  } else if (state.inputs.encoder.up) {
+    cal_value -= 100;
+    calibration_set_correction();
+  } else if (state.inputs.encoder.down) {
+    cal_value += 100;
+    calibration_set_correction();
+  }
+}
+
+void loop_calibration_peak_if()
+{
+  if (state.inputs.buttons.pins.keyer) {
+    IFfreq = state.op_freq;
+    EEPROM.write(0, state.op_freq);
+    EEPROM.write(1, state.op_freq >> 8);
+    EEPROM.write(2, state.op_freq >> 16);
+    EEPROM.write(3, state.op_freq >> 24);
+
+    state.state = S_CALIBRATION_CHANGE_BAND;
+    invalidate_frequencies();
+    invalidate_display();
+
+    while (state.inputs.buttons.pins.keyer)
+      delay(50);
+  } else if (state.inputs.encoder.up) {
+    state.op_freq += 1000;
+    invalidate_frequencies();
+  } else if (state.inputs.encoder.down) {
+    state.op_freq -= 1000;
+    invalidate_frequencies();
+  }
+}
+
+void loop_calibration_peak_rx()
+{
+  if (state.inputs.buttons.pins.keyer) {
+    state.state = S_DEFAULT;
+    invalidate_display();
+
+    while (state.inputs.buttons.pins.keyer)
+      delay(50);
+  }
+}
+
 void invalidate_display()
 {
   switch (state.state) {
@@ -455,6 +527,7 @@ void invalidate_display()
       display_cs();
       break;
     case S_CHANGE_BAND:
+    case S_CALIBRATION_CHANGE_BAND:
       display_band();
       break;
     case S_MEM_ENTER_WAIT:
@@ -471,6 +544,24 @@ void invalidate_display()
       state.display[2] = LED_E;
       state.display[1] = LED_n;
       state.display[0] = LED_d;
+      break;
+    case S_CALIBRATION_CORRECTION:
+      state.display[3] = LED_c;
+      state.display[2] = LED_o;
+      state.display[1] = LED_r;
+      state.display[0] = LED_r;
+      break;
+    case S_CALIBRATION_PEAK_IF:
+      state.display[3] = LED_P;
+      state.display[2] = 0x00;
+      state.display[1] = LED_I;
+      state.display[0] = LED_F;
+      break;
+    case S_CALIBRATION_PEAK_RX:
+      state.display[3] = LED_P;
+      state.display[2] = 0x00;
+      state.display[1] = LED_r;
+      state.display[0] = LED_X;
       break;
     case S_ERROR:
       state.display[3] = LED_E;
@@ -553,7 +644,6 @@ void mode_test()
     store_mem();
   int_memory_send();
 }
-
 
 void iambic()
 {
@@ -1023,7 +1113,6 @@ void loadWPM (byte wpm)
   state.key.dash_time = state.key.dit_time*3;
 }
 
-
 void Straight_key()
 {
   digitalWrite(MUTE, HIGH);
@@ -1045,100 +1134,10 @@ void Straight_key()
   digitalWrite(MUTE, LOW);
 }
 
-/*
- * Ref oscillator frequency is calibrated first
- * 10MHz signal outputted on CLOCK 0
- * tune to equal exactly 10.000,000 MHz
- * adjusted in 1 Hz steps.
- * display shows corectional factor in 0.01Hz. 1Hz is 100 on display.
- * Push keyer PB to advance to next IF offset cal
- * Push keyer PB to advance to band select
- * Push keyer PB again to store and exit
- */
-void calibration()
-{
-  long temp = cal_value;
-  state.display[3] = LED_C;
-  state.display[2] = LED_A;
-  state.display[1] = LED_L;
-  state.display[0] = 0x00;
-  calibration_set_correction();
-  enable_rx_tx(RX_OFF_TX_ON);
-  delay(500);
-
-  while (!state.inputs.buttons.pins.keyer) {
-    if (state.inputs.encoder.up)
-      cal_value -= 100;
-    else if (state.inputs.encoder.down)
-      cal_value += 100;
-    state.inputs.encoder.value = 0;
-    calibration_set_correction();
-  }
-
-  temp = cal_value;
-  EEPROM.write(4, temp);
-  temp = cal_value >>8;
-  EEPROM.write(5, temp);
-
-  enable_rx_tx(RX_ON_TX_OFF);
-
-  while (state.inputs.buttons.pins.keyer)
-    delay(100);
-  digitalWrite(MUTE, LOW);
-  state.op_freq = IF_DEFAULT;
-  calibration_set_op_freq();
-  display_freq();
-  delay(500);
-  while (!state.inputs.buttons.pins.keyer) {
-    if (state.inputs.encoder.up)
-      state.op_freq += 1000;
-    if (state.inputs.encoder.down)
-      state.op_freq -= 1000;
-    state.inputs.encoder.value = 0;
-    calibration_set_op_freq();
-  }
-
-  IFfreq = state.op_freq;
-  temp = state.op_freq;
-  EEPROM.write(0, temp);
-  temp = state.op_freq >>8;
-  EEPROM.write(1, temp);
-  temp = state.op_freq >>16;
-  EEPROM.write(2, temp);
-  temp = state.op_freq >> 24;
-  EEPROM.write(3, temp);
-
-  while (state.inputs.buttons.pins.keyer)
-    delay(100);
-  changeBand();
-  unsigned int duration;
-
-  state.display[3] = LED_P;
-  state.display[2] = LED_E;
-  state.display[1] = LED_A;
-  state.display[0] = 0x00;
-  si5351.set_freq(state.op_freq, 0ull, SI5351_CLK1);
-  enable_rx_tx(RX_OFF_TX_OFF);
-
-  while (!state.inputs.buttons.pins.keyer)
-    delay(100);
-  enable_rx_tx(RX_ON_TX_OFF);
-  display_freq();
-  while (state.inputs.buttons.pins.keyer)
-    delay(100);
-  delay(500);
-}
-
 void calibration_set_correction()
 {
   si5351.set_correction(cal_value);
   si5351.set_freq(1000000000, 0ull, SI5351_CLK1);
-}
-
-void calibration_set_op_freq()
-{
-  si5351.set_freq(state.op_freq, 0ull, SI5351_CLK0);
-  display_freq();
 }
 
 void cal_data()
@@ -1204,7 +1203,6 @@ void nextband(byte up)
 
   invalidate_display();
   invalidate_frequencies();
-  display_band(); // TODO remove calibration hack
 }
 
 void setup_band()
@@ -1236,9 +1234,16 @@ void enable_rx_tx(byte option)
 
 void invalidate_frequencies()
 {
-  si5351.set_freq(
-      state.op_freq >= IFfreq ? state.op_freq - IFfreq: state.op_freq + IFfreq,
-      0ull, SI5351_CLK0);
+  unsigned long freq;
+
+  if (state.state == S_CALIBRATION_PEAK_IF)
+    freq = state.op_freq;
+  else if (state.op_freq >= IFfreq)
+    freq = state.op_freq - IFfreq;
+  else
+    freq = state.op_freq + IFfreq;
+
+  si5351.set_freq(freq, 0ull, SI5351_CLK_RX);
   si5351.set_freq(TX_FREQ(state), 0ull, SI5351_CLK_TX);
 }
 

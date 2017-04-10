@@ -11,16 +11,22 @@
 #define LED_N_7 0x89
 #define LED_N_8 0xfb
 #define LED_N_9 0xd9
-#define LED_r   0x30
+
 #define LED_neg 0x10
-#define LED_C   0xe2
-#define LED_n   0x38
-#define LED_E   0xf2
-#define LED_t   0x72
-#define LED_o   0x3a
-#define LED_d   0x3b
+
 #define LED_A   0xf9
+#define LED_C   0xe2
+#define LED_E   0xf2
+#define LED_F   0xf0
+#define LED_I   LED_N_1
 #define LED_L   0x62
 #define LED_P   0xf1
+#define LED_X   0x79
+#define LED_c   0x32
+#define LED_d   0x3b
+#define LED_n   0x38
+#define LED_o   0x3a
+#define LED_r   0x30
+#define LED_t   0x72
 
 #endif
