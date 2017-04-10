@@ -83,7 +83,7 @@ const byte LED_DIGITS[] =
 
 #define IF_DEFAULT 491480000
 
-enum band {
+enum band : byte {
   BAND_160,
   BAND_80,
   BAND_60,
@@ -174,7 +174,22 @@ struct key_state {
   unsigned int timer;
 };
 
-struct state {
+enum state : byte {
+  S_DEFAULT,
+  S_ADJUST_CS,
+  S_CHANGE_BAND,
+  S_MEM_SEND_WAIT,
+  S_MEM_SEND_TX,
+  S_MEM_ENTER_WAIT,
+  S_MEM_ENTER,
+  S_MEM_ENTER_REVIEW,
+  S_CALIBRATION,
+  S_ERROR
+};
+
+struct soda_pop {
+  enum state state;
+
   struct key_state key;
 
   enum band band;
@@ -182,13 +197,12 @@ struct state {
   unsigned long rit_tx_freq;
 
   byte rit:1;
-  byte code_speed:1;
 
   byte display[4];
   struct inputs inputs;
 };
 
-struct state state;
+struct soda_pop state;
 
 #define TX_FREQ(state) (state.rit ? state.rit_tx_freq : state.op_freq)
 
@@ -263,13 +277,11 @@ void setup()
   si5351.set_correction(cal_value); //correct the clock chip error
   stepK = TUNE_STEP_DEFAULT;
   stepSize = 0;
-  state.display[3] = LED_N_6;
-  state.display[2] = LED_n;
+  display_band();
   setup_band();
   delay(1000);
-  display_freq();
-  write_pll();
   digitalWrite(MUTE, LOW);
+  invalidate_display();
 
   if (digitalRead(DASHin) == LOW)
     state.key.mode = KEY_STRAIGHT;
@@ -277,65 +289,202 @@ void setup()
 
 void loop()
 {
-  // test for switch closed
-  if (state.key.mode == KEY_IAMBIC)
-    iambic();
-  else if (digitalRead(DOTin) == LOW)
-    Straight_key();
-
-  // Encoder switch
-  if (state.inputs.buttons.pins.encoder)
-    nextFstep();
-  while (state.inputs.buttons.pins.encoder)
-    delay(10); // debounce, wait for switch release
-
-  // RIT switch
-  if (state.inputs.buttons.pins.rit)
-     timeRIT();
-  while (state.inputs.buttons.pins.rit)
-    delay(10); //debounce, wait for switch release
-
-  // Keyer switch
-  if (state.inputs.buttons.pins.keyer)
-    keyer_mode();
-
-  if (state.code_speed) {
-    if (state.inputs.encoder.up)
-      cs_adjust(1);
-    if (state.inputs.encoder.down)
-      cs_adjust(-1);
-  } else {
-    if (state.inputs.encoder.up)
-      freq_adjust(stepK);
-    if (state.inputs.encoder.down)
-      freq_adjust(-((int) stepK));
+  switch (state.state) {
+    case S_DEFAULT:          loop_default(); break;
+    case S_ADJUST_CS:        loop_adjust_cs(); break;
+    case S_CHANGE_BAND:      loop_change_band(); break;
+    case S_MEM_ENTER_WAIT:   break;
+    case S_MEM_ENTER:        loop_mem_enter(); break;
+    case S_MEM_ENTER_REVIEW: break;
+    case S_MEM_SEND_WAIT:    loop_mem_send_wait(); break;
+    case S_MEM_SEND_TX:      break;
+    case S_ERROR:            loop_error(); break;
+    default:
+      error();
+      break;
   }
+
   state.inputs.encoder.value = 0;
 }
 
-void keyer_mode()
+void loop_default()
 {
-  if (state.code_speed)
-    adjCSoff();
-  if (bitRead(memoryflag,7))
-    store_mem();
-  else
-    timebutton();
+  unsigned int duration;
+  // Tuning with the rotary encoder
+  if (state.inputs.encoder.up) {
+    freq_adjust(stepK);
+  } else if (state.inputs.encoder.down) {
+    freq_adjust(-((int) stepK));
+  } else if (state.inputs.buttons.pins.encoder) {
+    nextFstep();
+    while (state.inputs.buttons.pins.encoder)
+      delay(50);
+  // Keyer switch for memory and code speed
+  } else if (state.inputs.buttons.pins.keyer) {
+    duration = time_keyer();
+    if (duration > 2000) {
+      state.state = S_MEM_ENTER_WAIT;
+      invalidate_display();
+    } else if (duration > 500) {
+      state.state = S_ADJUST_CS;
+      invalidate_display();
+    } else if (duration > 50) {
+      state.state = S_MEM_SEND_WAIT;
+      invalidate_display();
+    }
+  // RIT switch for RIT, changing band, calibration and erasing EEPROM
+  } else if (state.inputs.buttons.pins.rit) {
+    duration = time_rit();
+#ifdef OPT_ERASE_EEPROM
+    if (duration > 8000)
+      ee_erase();
+    else
+#endif
+    if (duration > 5000) {
+      state.state = S_CALIBRATION;
+      calibration();
+      state.state = S_DEFAULT;
+    }
+#ifdef OPT_BAND_SELECT
+    else if (duration > 2000) {
+      state.state = S_CHANGE_BAND;
+      invalidate_display();
+    }
+#endif
+    else if (duration > 50) {
+      if (state.rit) {
+        state.rit = 0;
+        state.op_freq = state.rit_tx_freq;
+        invalidate_frequencies();
+      } else {
+        state.rit = 1;
+        state.rit_tx_freq = state.op_freq;
+      }
+      invalidate_display();
+    }
+  // Keying
+  } else if (state.key.mode == KEY_IAMBIC) {
+    iambic();
+  } else if (digitalRead(DOTin) == LOW) {
+    Straight_key();
+  }
 }
 
-void timeRIT()
+void loop_adjust_cs()
+{
+  // Rotary encoder
+  if (state.inputs.encoder.up) {
+    adjust_cs(1);
+  } else if (state.inputs.encoder.down) {
+    adjust_cs(-1);
+  // Paddle
+  } else if (!digitalRead(DASHin)) {
+    adjust_cs(1);
+    delay(200);
+  } else if (!digitalRead(DOTin)) {
+    adjust_cs(-1);
+    delay(200);
+  // Exiting
+  } else if (state.inputs.buttons.pins.keyer) {
+    state.state = S_DEFAULT;
+    invalidate_display();
+    while (state.inputs.buttons.pins.keyer)
+      delay(50);
+  }
+}
+
+void loop_change_band()
+{
+  // Change with rotary encoder
+  if (state.inputs.encoder.up) {
+    nextband(1);
+  } else if (state.inputs.encoder.down) {
+    nextband(0);
+  // Save with keyer
+  } else if (state.inputs.buttons.pins.keyer) {
+    store_band();
+    state.state = S_DEFAULT;
+    invalidate_display();
+    while (state.inputs.buttons.pins.keyer)
+      delay(50);
+  }
+}
+
+void loop_mem_enter()
+{
+  if (state.inputs.buttons.pins.keyer)
+    state.state = S_MEM_ENTER_REVIEW;
+}
+
+void loop_mem_send_wait()
+{
+  // Paddle chooses a memory
+  if (!digitalRead(DASHin)) {
+    send_memory0();
+    state.state = S_MEM_SEND_TX;
+  } else if (!digitalRead(DOTin)) {
+    send_memory1();
+    state.state = S_MEM_SEND_TX;
+  // Keyer exits
+  } else if (state.inputs.buttons.pins.keyer) {
+    state.state = S_DEFAULT;
+    invalidate_display();
+    while (state.inputs.buttons.pins.keyer)
+      delay(50);
+  }
+}
+
+void loop_error()
+{
+  tone(A2, 900);
+  delay(150);
+  noTone(A2);
+  delay(450);
+}
+
+void invalidate_display()
+{
+  switch (state.state) {
+    case S_DEFAULT:
+      if (state.rit)
+        display_rit();
+      else
+        display_freq();
+      break;
+    case S_ADJUST_CS:
+      display_cs();
+      break;
+    case S_CHANGE_BAND:
+      display_band();
+      break;
+    case S_MEM_ENTER_WAIT:
+    case S_MEM_ENTER:
+    case S_MEM_ENTER_REVIEW:
+      state.display[3] = LED_E;
+      state.display[2] = LED_n;
+      state.display[1] = LED_t;
+      state.display[0] = LED_r;
+      break;
+    case S_MEM_SEND_WAIT:
+    case S_MEM_SEND_TX:
+      state.display[3] = LED_N_5;
+      state.display[2] = LED_E;
+      state.display[1] = LED_n;
+      state.display[0] = LED_d;
+      break;
+    case S_ERROR:
+      state.display[3] = LED_E;
+      state.display[2] = LED_r;
+      state.display[1] = LED_r;
+      state.display[0] = 0x00;
+      break;
+  }
+}
+
+unsigned int time_rit()
 {
   unsigned int duration = 0;
   unsigned long start_time = tcount;
-
-  if (bitRead(memoryflag,7) !=0) { //this exits memory entry mode
-    memoryflag &= MEM_EN_CL;
-    display_freq();
-    digitalWrite(MUTE, LOW);
-    do
-      delay(100);
-    while (state.inputs.buttons.pins.rit);
-  }
 
   do {
     duration = tcount - start_time;
@@ -364,22 +513,10 @@ void timeRIT()
     delay(1);
   } while (state.inputs.buttons.pins.rit);
 
-#ifdef OPT_ERASE_EEPROM
-  if (duration > 8000)
-    ee_erase();
-  else
-#endif
-  if (duration > 5000)
-    calibration();
-#ifdef OPT_BAND_SELECT
-  else if (duration > 2000)
-    changeBand();
-#endif
-  else if (duration > 50)
-    RIT();
+  return duration;
 }
 
-void timebutton()
+unsigned int time_keyer()
 {
   unsigned int duration = 0;
   unsigned long start_time = tcount;
@@ -406,14 +543,7 @@ void timebutton()
     //this doesn't seem to be a problem when doing digital reads of a port pin instead.
   } while (state.inputs.buttons.pins.keyer); // wait until the bit goes high.
 
-  if (duration > 2000) {
-    start_memory();
-  } else if (duration > 500) {
-    state.code_speed = 1;
-    display_cs();
-  } else if (duration > 50) {
-    int_memory_send();
-  }
+  return duration;
 }
 
 //test for keyer mode, send message or store message
@@ -428,17 +558,8 @@ void mode_test()
 void iambic()
 {
   if (digitalRead(DASHin) == LOW)
-    Ptest();
+    keyer();
   if (digitalRead(DOTin) == LOW)
-    Ptest();
-}
-
-//test if paddle used for keying or code speed adj
-void Ptest()
-{
-  if (state.code_speed)
-    CS_Pinput();
-  else
     keyer();
 }
 
@@ -454,7 +575,7 @@ void freq_adjust(int step)
     display_rit();
   else
     display_freq();
-  write_pll();
+  invalidate_frequencies();
 }
 
 //toggle tuning step rate
@@ -471,34 +592,14 @@ void nextFstep()
 /*
  *change keyer code speed stuff here
  */
-//clear code speed adjust mode
-void adjCSoff()
-{
-  state.code_speed = 0;
-  display_freq();
-
-  do
-    delay(100);
-  while (state.inputs.buttons.pins.keyer);
-}
-
-//change code speed with paddle
-void CS_Pinput() {
-  if (digitalRead(DASHin) == LOW)
-    cs_adjust(1);
-  if (digitalRead(DOTin) == LOW)
-    cs_adjust(-1);
-  delay(200);
-}
-
-void cs_adjust(byte adjustment)
+void adjust_cs(byte adjustment)
 {
   state.key.speed += adjustment;
   if (state.key.speed <= 5)
     state.key.speed = 5;
   else if (state.key.speed >= 30)
     state.key.speed = 30;
-  display_cs();
+  invalidate_display();
 }
 
 void display_cs()
@@ -508,25 +609,10 @@ void display_cs()
   state.display[1] = LED_DIGITS[state.key.speed / 10];
 }
 
-
 /*
  *
  * RIT mode stuff here
  */
-void RIT()
-{
-  if (state.rit) {
-    state.rit = 0;
-    state.op_freq = state.rit_tx_freq;
-    write_pll();
-    display_freq();
-  } else {
-    state.rit = 1;
-    state.rit_tx_freq = state.op_freq;
-    display_rit();
-  }
-}
-
 void display_rit()
 {
   unsigned long offset;
@@ -623,16 +709,6 @@ void TIMER1_SERVICE_ROUTINE()
       digitalWrite(SLED4, LOW);
       break;
   }
-}
-
-/*
- * output the frequency data to the clock chip.
- */
-void write_pll()
-{
-  si5351.set_freq(
-      state.op_freq >= IFfreq ? state.op_freq - IFfreq: state.op_freq + IFfreq,
-      0ull, SI5351_CLK0);
 }
 
 /*
@@ -1035,6 +1111,7 @@ void calibration()
   while (state.inputs.buttons.pins.keyer)
     delay(100);
   changeBand();
+  unsigned int duration;
 
   state.display[3] = LED_P;
   state.display[2] = LED_E;
@@ -1096,11 +1173,11 @@ void changeBand()
 
   do
     if (state.inputs.buttons.pins.rit)
-      nextband();
+      nextband(1);
   while (!state.inputs.buttons.pins.keyer);
 
   display_freq();
-  write_pll();
+  invalidate_frequencies();
   EEPROM.write(6, (byte) state.band);
 
   do
@@ -1108,22 +1185,45 @@ void changeBand()
   while (state.inputs.buttons.pins.keyer);
 }
 
-void nextband()
+void nextband(byte up)
 {
-  state.band = (enum band) (((byte) state.band) + 1);
-  if (state.band >= LAST_BAND)
+  if (up)
+    state.band = (enum band) (((byte) state.band) + 1);
+  else
+    state.band = (enum band) (((byte) state.band) - 1);
+  if (state.band == BAND_UNKNOWN)
+    state.band = (enum band) ((byte) LAST_BAND - 1);
+  else if (state.band >= LAST_BAND)
     state.band = (enum band) 0;
+
   setup_band();
+
   do
     delay(50);
   while (state.inputs.buttons.pins.rit);
+
+  invalidate_display();
+  invalidate_frequencies();
+  display_band(); // TODO remove calibration hack
 }
 
 void setup_band()
 {
   state.op_freq = BAND_OP_FREQS[state.band];
-  state.display[0] = LED_DIGITS[BAND_DIGITS_1[state.band]];
+  invalidate_frequencies();
+}
+
+void store_band()
+{
+  EEPROM.write(6, (byte) state.band);
+}
+
+void display_band()
+{
+  state.display[3] = LED_N_6;
+  state.display[2] = LED_n;
   state.display[1] = LED_DIGITS[BAND_DIGITS_2[state.band]];
+  state.display[0] = LED_DIGITS[BAND_DIGITS_1[state.band]];
 }
 
 void enable_rx_tx(byte option)
@@ -1134,6 +1234,14 @@ void enable_rx_tx(byte option)
   Wire.endTransmission();
 }
 
+void invalidate_frequencies()
+{
+  si5351.set_freq(
+      state.op_freq >= IFfreq ? state.op_freq - IFfreq: state.op_freq + IFfreq,
+      0ull, SI5351_CLK0);
+  si5351.set_freq(TX_FREQ(state), 0ull, SI5351_CLK_TX);
+}
+
 void ee_erase()
 {
   for (byte i=0; i<=7; i++)
@@ -1142,6 +1250,12 @@ void ee_erase()
   state.display[2] = LED_N_0;
   state.display[1] = LED_n;
   state.display[0] = LED_E;
+}
+
+void error()
+{
+  state.state = S_ERROR;
+  invalidate_display();
 }
 
 // vim: tabstop=2 shiftwidth=2 expandtab:
