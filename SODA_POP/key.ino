@@ -10,9 +10,9 @@ void adjust_cs(byte adjustment)
   invalidate_display();
 }
 
-void load_wpm(byte wpm)
+void load_cw_speed()
 {
-  state.key.dot_time = 1200u / ((unsigned int) wpm);
+  state.key.dot_time = 1200u / ((unsigned int) state.key.speed);
   state.key.dash_time = state.key.dot_time * 3;
 }
 

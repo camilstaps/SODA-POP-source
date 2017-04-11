@@ -25,5 +25,5 @@ void setup_band()
 
 void store_band()
 {
-  EEPROM.write(6, (byte) state.band);
+  EEPROM.write(EEPROM_BAND, (byte) state.band);
 }

@@ -88,11 +88,16 @@ void setup()
   state.state = S_STARTUP;
 
   state.key.mode = KEY_IAMBIC;
+#ifdef OPT_STORE_CW_SPEED
+  state.key.speed = EEPROM.read(EEPROM_CW_SPEED);
+  adjust_cs(0);
+#else
   state.key.speed = WPM_DEFAULT;
+#endif
   state.key.timeout = 1;
   state.key.dash = 0;
   state.key.dot = 0;
-  load_wpm(state.key.speed);
+  load_cw_speed();
 
   //switch inputs
   DDRB = 0x3f;
@@ -268,7 +273,8 @@ void loop_adjust_cs()
   // Exiting
   } else if (state.inputs.keyer) {
     state.state = S_DEFAULT;
-    load_wpm(state.key.speed);
+    load_cw_speed();
+    store_cw_speed();
     invalidate_display();
     debounce_keyer();
   }
@@ -459,8 +465,8 @@ void loop_error()
 void loop_calibration_correction()
 {
   if (state.inputs.keyer) {
-    EEPROM.write(4, cal_value);
-    EEPROM.write(5, cal_value >> 8);
+    EEPROM.write(EEPROM_CAL_VALUE, cal_value);
+    EEPROM.write(EEPROM_CAL_VALUE + 1, cal_value >> 8);
 
     state.state = S_CALIBRATION_PEAK_IF;
     state.op_freq = IF_DEFAULT;
@@ -482,10 +488,10 @@ void loop_calibration_peak_if()
 {
   if (state.inputs.keyer) {
     IFfreq = state.op_freq;
-    EEPROM.write(0, state.op_freq);
-    EEPROM.write(1, state.op_freq >> 8);
-    EEPROM.write(2, state.op_freq >> 16);
-    EEPROM.write(3, state.op_freq >> 24);
+    EEPROM.write(EEPROM_IF_FREQ, state.op_freq);
+    EEPROM.write(EEPROM_IF_FREQ + 1, state.op_freq >> 8);
+    EEPROM.write(EEPROM_IF_FREQ + 2, state.op_freq >> 16);
+    EEPROM.write(EEPROM_IF_FREQ + 3, state.op_freq >> 24);
 
     state.state = S_CALIBRATION_CHANGE_BAND;
     invalidate_frequencies();
@@ -680,6 +686,13 @@ void invalidate_frequencies()
   si5351.set_freq(freq, 0ull, SI5351_CLK_RX);
   si5351.set_freq(TX_FREQ(state), 0ull, SI5351_CLK_TX);
 }
+
+#ifdef OPT_STORE_CW_SPEED
+void store_cw_speed()
+{
+  EEPROM.write(EEPROM_CW_SPEED, state.key.speed);
+}
+#endif
 
 #ifdef OPT_ERASE_EEPROM
 void ee_erase()

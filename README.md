@@ -117,6 +117,7 @@ done by adding and removing `#define` lines to `settings.h`.
 
 - `OPT_BAND_SELECT`: change the band by pressing RIT for 2s.
 - `OPT_ERASE_EEPROM`: erase the EEPROM by holding RIT for 8s.
+- `OPT_STORE_CW_SPEED`: store the CW speed in EEPROM.
 - `OPT_DFE`: direct frequency entry by holding the encoder button for 1s.
 - `OPT_DFE_OBSCURE_ABBREVIATIONS`: adds number abbreviations to DFE according
   to the table below. Abbreviations for 0 (T) and 9 (N) are always enabled.
@@ -177,6 +178,7 @@ Some images of the connections:
 	- Made several things settings (see `settings.h`)
 	- Big steps tuning (issue [#3](/../../issues/3))
 	- Direct frequency entry (issue [#2](/../../issues/2))
+	- Store CW speed in EEPROM (issue [#1](/../../issues/1))
 - 2017-04-04:
 	- Added bands up to 10m and enabled run-time band switching
 	- Fixed rotary encoder issues

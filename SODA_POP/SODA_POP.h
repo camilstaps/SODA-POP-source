@@ -67,4 +67,11 @@ byte dfe_position;
 unsigned int dfe_freq;
 #endif
 
+#define EEPROM_IF_FREQ   0 // 4 bytes
+#define EEPROM_CAL_VALUE 4 // 2 bytes
+#define EEPROM_BAND      6 // 1 byte
+#ifdef OPT_STORE_CW_SPEED
+#define EEPROM_CW_SPEED  7 // 1 byte
+#endif
+
 #endif

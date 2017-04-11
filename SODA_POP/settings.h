@@ -13,7 +13,8 @@
 #define MEMORY_EEPROM_START  16 // Start of memory block in EEPROM
 
 // Custom features
-#define OPT_BAND_SELECT  // Band selection by pressing RIT for 2s
-#define OPT_ERASE_EEPROM // Erase EEPROM by pressing RIT for 8s
-#define OPT_DFE          // Direct frequency entry by holding encoder for 2s
+#define OPT_BAND_SELECT    // Band selection by pressing RIT for 2s
+#define OPT_ERASE_EEPROM   // Erase EEPROM by pressing RIT for 8s
+#define OPT_STORE_CW_SPEED // Store CW speed in EEPROM
+#define OPT_DFE            // Direct frequency entry by holding encoder for 2s
 //#define OPT_DFE_OBSCURE_ABBREVIATIONS // Obscure CW number abbrevations in DFE mode
