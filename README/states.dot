@@ -1,9 +1,10 @@
 digraph {
 	startup[label="Startup"];
-	default[label="Default", width=1.5, height=1];
+	default[label="Default", width=1.5, height=1.5];
 	keying[label="Keying"];
 	adjust_cs[label="Adjust CS"];
 	change_band[label="Change Band"];
+	dfe[label="DFE"];
 	mem_send_wait[label="Mem Send Wait"];
 	mem_send_tx[label="Mem Send TX"];
 	mem_enter_wait[label="Mem Enter Wait"];
@@ -28,6 +29,10 @@ digraph {
 	default -> change_band [label="RIT (2s)"];
 	change_band:s -> change_band:s [label="Up/down"];
 	change_band -> default [label="Keyer"];
+
+	default -> dfe [label="Encoder (1s)"];
+	dfe:s -> dfe:s [label="Paddle"];
+	dfe -> default [label="RIT/Keyer"];
 
 	default -> mem_send_wait [label="Keyer", constraint=false];
 	mem_send_wait -> default [label="Keyer"];

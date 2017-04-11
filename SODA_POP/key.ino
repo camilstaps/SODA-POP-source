@@ -38,10 +38,9 @@ void straight_key()
 
 void key_isr()
 {
-  if (state.key.timer > 0) {
+  if (state.key.timer > 0)
     if (--state.key.timer == 0)
       state.key.timeout = 1;
-  }
 }
 
 void iambic_key()

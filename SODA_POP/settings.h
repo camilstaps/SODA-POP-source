@@ -1,3 +1,7 @@
+/*
+ * For more detailed descriptions of these settings, see README.md.
+ */
+
 #define WPM_DEFAULT          20 // Initial paddle speed in WPM
 
 #define KEY_MIN_SPEED         5 // Minimal speed in WPM
@@ -11,3 +15,5 @@
 // Custom features
 #define OPT_BAND_SELECT  // Band selection by pressing RIT for 2s
 #define OPT_ERASE_EEPROM // Erase EEPROM by pressing RIT for 8s
+#define OPT_DFE          // Direct frequency entry by holding encoder for 2s
+//#define OPT_DFE_OBSCURE_ABBREVIATIONS // Obscure CW number abbrevations in DFE mode

@@ -137,8 +137,6 @@ void setup()
 
   if (digitalRead(DASHin) == LOW)
     state.key.mode = KEY_STRAIGHT;
-
-  state.display.blinking = BLINK_1;
 }
 
 void loop()
@@ -147,7 +145,12 @@ void loop()
     case S_DEFAULT:                 loop_default(); break;
     case S_KEYING:                  loop_keying(); break;
     case S_ADJUST_CS:               loop_adjust_cs(); break;
+#ifdef OPT_BAND_SELECT
     case S_CHANGE_BAND:             loop_change_band(); break;
+#endif
+#ifdef OPT_DFE
+    case S_DFE:                     loop_dfe(); break;
+#endif
     case S_MEM_ENTER_WAIT:          loop_mem_enter_wait(); break;
     case S_MEM_ENTER:               loop_mem_enter(); break;
     case S_MEM_ENTER_REVIEW:        loop_mem_enter_review(); break;
@@ -175,8 +178,23 @@ void loop_default()
   } else if (rotated_down()) {
     freq_adjust(-tuning_steps[state.tuning_step]);
   } else if (state.inputs.encoder_button) {
-    nextFstep();
-    debounce_encoder_button();
+    duration = time_encoder_button();
+#ifdef OPT_DFE
+    if (duration > 1000) {
+      if (state.key.mode == KEY_IAMBIC) {
+        state.state = S_DFE;
+        dfe_character = 0xff;
+        dfe_position = 3;
+        dfe_freq = 0;
+        invalidate_display();
+      } else {
+        morse(MX);
+      }
+    } else
+#endif
+    if (duration > 50) {
+      rotate_tuning_steps();
+    }
   // Keyer switch for memory and code speed
   } else if (state.inputs.keyer) {
     duration = time_keyer();
@@ -279,6 +297,74 @@ void loop_change_band()
     debounce_keyer();
   }
 }
+
+#ifdef OPT_DFE
+void loop_dfe()
+{
+  if (dfe_character != 0xff) {
+    unsigned int add;
+    switch (dfe_character) {
+      case M0: case MT: add = 0; break;
+#ifdef OPT_DFE_OBSCURE_ABBREVIATIONS
+      case M1: case MA: add = 1; break;
+      case M2: case MU: add = 2; break;
+      case M3: case MW: add = 3; break;
+      case M4: case MV: add = 4; break;
+      case M5: case MS: add = 5; break;
+      case M6: case MB: add = 6; break;
+      case M7: case MG: add = 7; break;
+      case M8: case MD: add = 8; break;
+#else
+      case M1: add = 1; break;
+      case M2: add = 2; break;
+      case M3: add = 3; break;
+      case M4: add = 4; break;
+      case M5: add = 5; break;
+      case M6: add = 6; break;
+      case M7: add = 7; break;
+      case M8: add = 8; break;
+#endif
+      case M9: case MN: add = 9; break;
+      default:
+        morse(Mquestion);
+        dfe_character = 0xff;
+        return;
+    }
+    dfe_character = 0xff;
+
+    for (byte i = 0; i < dfe_position; i++)
+      add *= 10;
+    dfe_freq += add;
+
+    if (dfe_position-- == 0) {
+      set_dfe();
+      morse(MR);
+    }
+
+    invalidate_display();
+  } else if (state.inputs.keyer) {
+    set_dfe();
+    invalidate_display();
+    morse(MR);
+    debounce_keyer();
+  } else if (state.inputs.rit) {
+    state.state = S_DEFAULT;
+    invalidate_display();
+    morse(MX);
+    debounce_rit();
+  } else if (key_active()) {
+    iambic_key();
+  }
+}
+
+void set_dfe()
+{
+  state.op_freq = (BAND_LIMITS_LOW[state.band] / 10000000) * 10000000;
+  state.op_freq += ((unsigned long) dfe_freq) * 10000;
+  fix_op_freq();
+  state.state = S_DEFAULT;
+}
+#endif
 
 void loop_mem_enter_wait()
 {
@@ -426,20 +512,23 @@ void loop_calibration_peak_rx()
   }
 }
 
-// adjust the operating frequency
 void freq_adjust(long step)
 {
   state.op_freq += step;
-  if (state.op_freq > BAND_LIMITS_HIGH[state.band])
-    state.op_freq = BAND_LIMITS_HIGH[state.band];
-  if (state.op_freq < BAND_LIMITS_LOW[state.band])
-    state.op_freq = BAND_LIMITS_LOW[state.band];
+  fix_op_freq();
   invalidate_display();
   invalidate_frequencies();
 }
 
-//toggle tuning step rate
-void nextFstep()
+void fix_op_freq()
+{
+  if (state.op_freq > BAND_LIMITS_HIGH[state.band])
+    state.op_freq = BAND_LIMITS_HIGH[state.band];
+  if (state.op_freq < BAND_LIMITS_LOW[state.band])
+    state.op_freq = BAND_LIMITS_LOW[state.band];
+}
+
+void rotate_tuning_steps()
 {
   state.tuning_step++;
   if (state.tuning_step >= sizeof(tuning_steps))
@@ -448,7 +537,6 @@ void nextFstep()
 }
 
 /*
- *
  * timer outside of the normal Ardinu timers
  * does keyer timing and port D mulitplexing for display and
  * switch inputs.
@@ -491,6 +579,11 @@ void key_handle_end()
     buffer[memory_pointer] = 0xff;
     toggle_display();
   }
+#ifdef OPT_DFE
+  else if (state.state == S_DFE) {
+    dfe_character = morse_char;
+  }
+#endif
 }
 
 void key_handle_dash()

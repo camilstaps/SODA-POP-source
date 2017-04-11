@@ -30,8 +30,6 @@ void display_isr()
       break;
 
     case 3:
-      if (state.display.digits[3] == LED_N_0)
-        state.display.digits[3] = 0x00; //blank MSD if 0
       if (state.display.blinking != BLINK_3 || BLINKED_ON)
         PORTD = state.display.digits[3];
       digitalWrite(SLED4, LOW);
@@ -65,10 +63,17 @@ void invalidate_display()
       display_cs();
       break;
     case S_STARTUP:
+#ifdef OPT_BAND_SELECT
     case S_CHANGE_BAND:
+#endif
     case S_CALIBRATION_CHANGE_BAND:
       display_band();
       break;
+#ifdef OPT_DFE
+    case S_DFE:
+      display_dfe();
+      break;
+#endif
     case S_MEM_ENTER_WAIT:
     case S_MEM_ENTER:
       state.display.digits[3] = LED_E;
@@ -186,12 +191,36 @@ void display_freq()
   unsigned long frequency = state.op_freq/100;
   // Then display the digits one by one
   state.display.digits[3] = LED_DIGITS[(frequency % 1000000) / 100000];
+  if (state.display.digits[3] == LED_N_0)
+    state.display.digits[3] = 0x00; //blank MSD if 0
   state.display.digits[2] = LED_DIGITS[(frequency % 100000) / 10000];
   state.display.digits[1] = LED_DIGITS[(frequency % 10000) / 1000];
   state.display.digits[0] = LED_DIGITS[(frequency % 1000) / 100];
   state.display.dots = 0x2;
   state.display.blinking = tuning_blinks[state.tuning_step];
 }
+
+#ifdef OPT_DFE
+void display_dfe()
+{
+  if (dfe_position == 3) {
+    state.display.digits[3] = LED_D;
+    state.display.digits[2] = LED_F;
+    state.display.digits[1] = LED_E;
+    state.display.digits[0] = 0x00;
+    state.display.dots = 0x0;
+  } else {
+    state.display.digits[3] = LED_DIGITS[(dfe_freq % 10000) / 1000];
+    if (state.display.digits[3] == LED_N_0)
+      state.display.digits[3] = 0x00; //blank MSD if 0
+    state.display.digits[2] = LED_DIGITS[(dfe_freq % 1000) / 100];
+    state.display.digits[1] = LED_DIGITS[(dfe_freq % 100) / 10];
+    state.display.digits[0] = LED_DIGITS[dfe_freq % 10];
+    state.display.dots = 0x2;
+    state.display.blinking = dfe_position + 1;
+  }
+}
+#endif
 
 void display_band()
 {

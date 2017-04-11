@@ -54,6 +54,7 @@ unsigned int time_rit()
 #endif
     delay(1);
   } while (state.inputs.rit);
+  debounce_rit();
 
   return duration;
 }
@@ -87,6 +88,30 @@ unsigned int time_keyer()
     delay(1); //for some reason a delay call has to be done when doing bit read flag tests or it locks up
     //this doesn't seem to be a problem when doing digital reads of a port pin instead.
   } while (state.inputs.keyer); // wait until the bit goes high.
+  debounce_keyer();
+
+  return duration;
+}
+
+unsigned int time_encoder_button()
+{
+  unsigned int duration = 0;
+  unsigned long start_time = tcount;
+
+  do {
+    duration = tcount - start_time;
+#ifdef OPT_DFE
+    if (duration > 1000) {
+      state.display.digits[3] = LED_D;
+      state.display.digits[2] = LED_F;
+      state.display.digits[1] = LED_E;
+      state.display.digits[0] = 0x00;
+      state.display.dots = 0x0;
+    }
+#endif
+    delay(1);
+  } while (state.inputs.encoder_button);
+  debounce_encoder_button();
 
   return duration;
 }

@@ -41,4 +41,6 @@
 #define M8 0b111100 // 8
 #define M9 0b111110 // 9
 
+#define Mquestion 0b1001100 // ?
+
 #endif

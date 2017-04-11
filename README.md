@@ -35,6 +35,13 @@ Use the rotary encoder to tune. Tuning can be done in steps of 50Hz, 200Hz,
 1kHz and 10kHz. Rotate through these steps by pressing the rotary encoder. For
 all steps except 50Hz, the corresponding digit on the display will blink.
 
+Direct Frequency Entry (DFE) can be used by holding the encoder button for 1s.
+It is only available when a paddle is connected. The display will read `DFE`.
+Key in the desired frequency. The current digit blinks. Save with the keyer
+switch or cancel with the RIT switch. When all four digits are entered, the
+new frequency is saved automatically. Abbreviations can be used for 0 (T) and 9
+(N) and for all numbers when enabled (see under 'Optional features').
+
 ### RIT
 Pressing the RIT button turns RIT on. The display will show the RIT offset.
 
@@ -110,6 +117,20 @@ done by adding and removing `#define` lines to `settings.h`.
 
 - `OPT_BAND_SELECT`: change the band by pressing RIT for 2s.
 - `OPT_ERASE_EEPROM`: erase the EEPROM by holding RIT for 8s.
+- `OPT_DFE`: direct frequency entry by holding the encoder button for 1s.
+- `OPT_DFE_OBSCURE_ABBREVIATIONS`: adds number abbreviations to DFE according
+  to the table below. Abbreviations for 0 (T) and 9 (N) are always enabled.
+
+  | Letter | Number
+  ---|---
+  | A | 1
+  | U | 2
+  | W | 3
+  | V | 4
+  | S | 5
+  | B | 6
+  | G | 7
+  | D | 8
 
 ## How to flash the firmware
 
@@ -155,6 +176,7 @@ Some images of the connections:
 	- Minor changes to the display
 	- Made several things settings (see `settings.h`)
 	- Big steps tuning (issue [#3](/../../issues/3))
+	- Direct frequency entry (issue [#2](/../../issues/2))
 - 2017-04-04:
 	- Added bands up to 10m and enabled run-time band switching
 	- Fixed rotary encoder issues

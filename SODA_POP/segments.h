@@ -17,6 +17,7 @@
 
 #define LED_A   0xf9
 #define LED_C   0xe2
+#define LED_D   LED_N_0
 #define LED_E   0xf2
 #define LED_F   0xf0
 #define LED_I   LED_N_1

@@ -14,7 +14,12 @@ enum state : unsigned char {
   S_DEFAULT,
   S_KEYING,
   S_ADJUST_CS,
+#ifdef OPT_BAND_SELECT
   S_CHANGE_BAND,
+#endif
+#ifdef OPT_DFE
+  S_DFE,
+#endif
   S_MEM_SEND_WAIT,
   S_MEM_SEND_TX,
   S_MEM_ENTER_WAIT,
@@ -55,5 +60,11 @@ const byte tuning_blinks[] = {BLINK_NONE, BLINK_0, BLINK_1, BLINK_2};
 
 #define SIDETONE_ENABLE() {tone(A2, SIDETONE_FREQ);}
 #define SIDETONE_DISABLE() {noTone(A2);}
+
+#ifdef OPT_DFE
+byte dfe_character;
+byte dfe_position;
+unsigned int dfe_freq;
+#endif
 
 #endif
