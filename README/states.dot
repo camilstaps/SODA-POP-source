@@ -1,0 +1,52 @@
+digraph {
+	startup[label="Startup"];
+	default[label="Default", width=1.5, height=1];
+	keying[label="Keying"];
+	adjust_cs[label="Adjust CS"];
+	change_band[label="Change Band"];
+	mem_send_wait[label="Mem Send Wait"];
+	mem_send_tx[label="Mem Send TX"];
+	mem_enter_wait[label="Mem Enter Wait"];
+	mem_enter[label="Mem Enter"];
+	mem_enter_review[label="Mem Enter Review"];
+	cal_correction[label="Cal. Correction"];
+	cal_peak_if[label="Cal. Peak IF"];
+	cal_change_band[label="Cal. Change Band"];
+	cal_peak_rx[label="Cal. Peak RX"];
+
+	startup -> default;
+
+	default -> default [label="Up/down/encoder"];
+
+	default -> keying [label="Key"];
+	keying -> default;
+
+	default -> adjust_cs [label="Keyer (2s)"];
+	adjust_cs:s -> adjust_cs:s [label="Up/down/paddle"];
+	adjust_cs -> default [label="Keyer"];
+
+	default -> change_band [label="RIT (2s)"];
+	change_band:s -> change_band:s [label="Up/down"];
+	change_band -> default [label="Keyer"];
+
+	default -> mem_send_wait [label="Keyer", constraint=false];
+	mem_send_wait -> default [label="Keyer"];
+	mem_send_wait -> mem_send_tx [label="Paddle"];
+	mem_send_tx -> default;
+
+	default -> mem_enter_wait [label="Keyer (5s)", constraint=false];
+	mem_enter_wait -> default [label="Keyer"];
+	mem_enter_wait -> mem_enter [label="Paddle"];
+	mem_enter -> mem_enter_review [label="Keyer"];
+	mem_enter_review -> mem_enter_wait [label="Keyer"];
+	mem_enter_review -> default [label="Paddle"];
+
+	default -> cal_correction [label="RIT (5s)"];
+	cal_correction:e -> cal_correction:e [label="Up/down"];
+	cal_correction -> cal_peak_if [label="Keyer"];
+	cal_peak_if:w -> cal_peak_if:w [label="Up/down"];
+	cal_peak_if -> cal_change_band [label="Keyer"];
+	cal_change_band:w -> cal_change_band:w [label="Up/down"];
+	cal_change_band -> cal_peak_rx [label="Keyer"];
+	cal_peak_rx -> default [label="Keyer"];
+}
