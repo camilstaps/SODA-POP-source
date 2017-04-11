@@ -31,9 +31,9 @@ On startup, the band will be shown (e.g. `bn.20`). After a 1s delay, the rig
 will turn on.
 
 ### Tuning
-Use the rotary encoder to tune. The default step is 50Hz. By pressing the
-rotary encoder, the step can be changed to 200Hz. Pressing again goes back to
-50Hz. These steps can be changed in `settings.h`.
+Use the rotary encoder to tune. Tuning can be done in steps of 50Hz, 200Hz,
+1kHz and 10kHz. Rotate through these steps by pressing the rotary encoder. For
+all steps except 50Hz, the corresponding digit on the display will blink.
 
 ### RIT
 Pressing the RIT button turns RIT on. The display will show the RIT offset.
@@ -94,9 +94,6 @@ There are several compile-time settings in `settings.h`. Change them before
 uploading the code to the chip.
 
 - `WPM_DEFAULT`: the default key speed in WPM (20).
-- `TUNE_STEP_DEFAULT`: the default tune step (50Hz) in mHz.
-- `TUNE_STEP_ALT`: the alternative tune step (200Hz), enabled by pressing the
-  rotary encoder.
 - `KEY_MIN_SPEED`: the minimum key speed in WPM (5). Lower speeds than 5 may
   damage the rig, because the on-time for dashes will be rather long.
 - `KEY_MAX_SPEED`: the maximum key speed in WPM (30). Higher speeds than 30 are
@@ -157,6 +154,7 @@ Some images of the connections:
 	- Fixed a bug with entering memory
 	- Minor changes to the display
 	- Made several things settings (see `settings.h`)
+	- Big steps tuning (issue [#3](/../../issues/3))
 - 2017-04-04:
 	- Added bands up to 10m and enabled run-time band switching
 	- Fixed rotary encoder issues

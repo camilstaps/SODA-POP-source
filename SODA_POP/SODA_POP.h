@@ -37,6 +37,7 @@ struct soda_pop {
   unsigned long rit_tx_freq;
 
   unsigned char rit:1;
+  unsigned char tuning_step:2;
 
   struct display display;
   struct inputs inputs;
@@ -46,6 +47,9 @@ static struct soda_pop state;
 static unsigned long tcount;
 
 static char buffer[MEMORY_LENGTH];
+
+const long tuning_steps[] = {5000, 20000, 100000, 1000000};
+const byte tuning_blinks[] = {BLINK_NONE, BLINK_0, BLINK_1, BLINK_2};
 
 #define TX_FREQ(state) (state.rit ? state.rit_tx_freq : state.op_freq)
 

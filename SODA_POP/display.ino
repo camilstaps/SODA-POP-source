@@ -1,30 +1,39 @@
 #include "display.h"
 
 volatile byte digit_counter = 0;
+
+#define BLINKED_ON ((((byte) tcount) >> 7) & 0x01)
+
 void display_isr()
 {
   digit_counter = (digit_counter + 1) % 4;
 
+  PORTD = 0x00;
+
   switch(digit_counter) {
     case 0:
-      PORTD = state.display.digits[0];
+      if (state.display.blinking != BLINK_0 || BLINKED_ON)
+        PORTD = state.display.digits[0];
       digitalWrite(SLED1, LOW);
       break;
 
     case 1:
-      PORTD = state.display.digits[1];
+      if (state.display.blinking != BLINK_1 || BLINKED_ON)
+        PORTD = state.display.digits[1];
       digitalWrite(SLED2, LOW);
       break;
 
     case 2:
-      PORTD = state.display.digits[2];
+      if (state.display.blinking != BLINK_2 || BLINKED_ON)
+        PORTD = state.display.digits[2];
       digitalWrite(SLED3, LOW);
       break;
 
     case 3:
       if (state.display.digits[3] == LED_N_0)
         state.display.digits[3] = 0x00; //blank MSD if 0
-      PORTD = state.display.digits[3];
+      if (state.display.blinking != BLINK_3 || BLINKED_ON)
+        PORTD = state.display.digits[3];
       digitalWrite(SLED4, LOW);
       break;
   }
@@ -43,6 +52,7 @@ void disable_display()
 
 void invalidate_display()
 {
+  state.display.blinking = BLINK_NONE;
   switch (state.state) {
     case S_DEFAULT:
     case S_KEYING:
@@ -167,6 +177,7 @@ void display_rit()
   state.display.digits[0] = LED_DIGITS[(offset % 1000) / 100];
 
   state.display.dots = 0x2;
+  state.display.blinking = tuning_blinks[state.tuning_step];
 }
 
 void display_freq()
@@ -179,6 +190,7 @@ void display_freq()
   state.display.digits[1] = LED_DIGITS[(frequency % 10000) / 1000];
   state.display.digits[0] = LED_DIGITS[(frequency % 1000) / 100];
   state.display.dots = 0x2;
+  state.display.blinking = tuning_blinks[state.tuning_step];
 }
 
 void display_band()

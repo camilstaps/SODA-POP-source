@@ -1,8 +1,5 @@
 #define WPM_DEFAULT          20 // Initial paddle speed in WPM
 
-#define TUNE_STEP_DEFAULT  5000 // Initial tune step in centi-Hz (5000 = 50Hz)
-#define TUNE_STEP_ALT     20000 // Alternative tune step
-
 #define KEY_MIN_SPEED         5 // Minimal speed in WPM
 #define KEY_MAX_SPEED        30 // Maximal speed in WPM
 

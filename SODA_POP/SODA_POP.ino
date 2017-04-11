@@ -53,24 +53,6 @@ Si5351 si5351;
 #define SLED2 11
 #define SLED1 12
 
-const byte LED_DIGITS[] =
-  { LED_N_0, LED_N_1, LED_N_2, LED_N_3, LED_N_4
-  , LED_N_5, LED_N_6, LED_N_7, LED_N_8, LED_N_9};
-
-//flag definitions
-
-#define CSflag    B00000001
-#define SK_EN     0x10
-#define MEM_EN    0x80
-#define MEM_EN_CL 0x7f
-#define UPflag    0x01
-#define DWNflag   0x02
-
-#define R_sw  6
-#define K_sw  7
-#define E_sw  2
-#define SK_FG 4
-
 #define SI5351_CLK_RX SI5351_CLK0
 #define SI5351_CLK_TX SI5351_CLK1
 
@@ -81,6 +63,10 @@ const byte LED_DIGITS[] =
 
 #define IF_DEFAULT 491480000
 
+const byte LED_DIGITS[] =
+  { LED_N_0, LED_N_1, LED_N_2, LED_N_3, LED_N_4
+  , LED_N_5, LED_N_6, LED_N_7, LED_N_8, LED_N_9};
+
 // register names
 byte memory_pointer;
 
@@ -88,10 +74,6 @@ const int   MUTE = A3;
 const int   TXEN = 13; // production A0
 const int   DASHin = A0;
 const int   DOTin = A1;
-
-//frequency tuning
-int         stepSize;   // tuning rate pointer
-long int    stepK;      // temp storage of freq tuning step
 
 unsigned long IFfreq;
 long          cal_value = 15000;
@@ -144,8 +126,7 @@ void setup()
 
   cal_data(); //load calibration data
   si5351.set_correction(cal_value); //correct the clock chip error
-  stepK = TUNE_STEP_DEFAULT;
-  stepSize = 0;
+  state.tuning_step = 0;
   setup_band();
   invalidate_display();
   delay(1000);
@@ -156,6 +137,8 @@ void setup()
 
   if (digitalRead(DASHin) == LOW)
     state.key.mode = KEY_STRAIGHT;
+
+  state.display.blinking = BLINK_1;
 }
 
 void loop()
@@ -188,9 +171,9 @@ void loop_default()
     state.state = S_KEYING;
   // Tuning with the rotary encoder
   } else if (rotated_up()) {
-    freq_adjust(stepK);
+    freq_adjust(tuning_steps[state.tuning_step]);
   } else if (rotated_down()) {
-    freq_adjust(-((int) stepK));
+    freq_adjust(-tuning_steps[state.tuning_step]);
   } else if (state.inputs.encoder_button) {
     nextFstep();
     debounce_encoder_button();
@@ -304,6 +287,7 @@ void loop_mem_enter_wait()
   if (state.inputs.keyer || state.key.mode != KEY_IAMBIC) {
     state.state = S_DEFAULT;
     invalidate_display();
+    morse(MX);
     debounce_keyer();
   } else if (key_active()) {
     state.state = S_MEM_ENTER;
@@ -443,7 +427,7 @@ void loop_calibration_peak_rx()
 }
 
 // adjust the operating frequency
-void freq_adjust(int step)
+void freq_adjust(long step)
 {
   state.op_freq += step;
   if (state.op_freq > BAND_LIMITS_HIGH[state.band])
@@ -457,9 +441,10 @@ void freq_adjust(int step)
 //toggle tuning step rate
 void nextFstep()
 {
-  stepSize = (stepSize + 1) % 2;
-  stepK = stepSize ? TUNE_STEP_ALT : TUNE_STEP_DEFAULT;
-  toggle_digit(0);
+  state.tuning_step++;
+  if (state.tuning_step >= sizeof(tuning_steps))
+    state.tuning_step = 0;
+  invalidate_display();
 }
 
 /*
