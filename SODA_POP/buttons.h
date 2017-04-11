@@ -1,3 +1,5 @@
+/* Copyright (C) 2017 Camil Staps <pd7lol@camilstaps.nl> */
+
 #ifndef _H_BUTTONS
 #define _H_BUTTONS
 
@@ -31,3 +33,5 @@ unsigned int time_rit(void);
 unsigned int time_keyer(void);
 
 #endif
+
+// vim: tabstop=2 shiftwidth=2 expandtab:

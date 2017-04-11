@@ -1,3 +1,5 @@
+/* Copyright (C) 2017 Camil Staps <pd7lol@camilstaps.nl> */
+
 #include "buttons.h"
 
 void buttons_isr()
@@ -149,3 +151,5 @@ byte rotated_up()
   state.inputs.up = 0;
   return 1;
 }
+
+// vim: tabstop=2 shiftwidth=2 expandtab:

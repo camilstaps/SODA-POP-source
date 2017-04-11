@@ -1,3 +1,5 @@
+/* Copyright (C) 2017 Camil Staps <pd7lol@camilstaps.nl> */
+
 /*
  * For more detailed descriptions of these settings, see README.md.
  */
@@ -18,3 +20,5 @@
 #define OPT_STORE_CW_SPEED // Store CW speed in EEPROM
 #define OPT_DFE            // Direct frequency entry by holding encoder for 2s
 //#define OPT_DFE_OBSCURE_ABBREVIATIONS // Obscure CW number abbrevations in DFE mode
+
+// vim: tabstop=2 shiftwidth=2 expandtab:

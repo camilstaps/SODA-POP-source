@@ -1,3 +1,5 @@
+/* Copyright (C) 2017 Camil Staps <pd7lol@camilstaps.nl> */
+
 #include "key.h"
 
 void adjust_cs(byte adjustment)
@@ -130,3 +132,5 @@ void wait_check_dash()
     delay(1);
   } while (!state.key.timeout);
 }
+
+// vim: tabstop=2 shiftwidth=2 expandtab:

@@ -1,3 +1,5 @@
+/* Copyright (C) 2017 Camil Staps <pd7lol@camilstaps.nl> */
+
 #include "display.h"
 
 volatile byte digit_counter = 0;
@@ -230,3 +232,5 @@ void display_band()
   state.display.digits[0] = LED_DIGITS[BAND_DIGITS_1[state.band]];
   state.display.dots = 0x4;
 }
+
+// vim: tabstop=2 shiftwidth=2 expandtab:

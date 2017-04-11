@@ -1,3 +1,5 @@
+/* Copyright (C) 2017 Camil Staps <pd7lol@camilstaps.nl> */
+
 #ifndef _H_MEMORY
 #define _H_MEMORY
 
@@ -9,3 +11,5 @@ void playback_buffer(void);
 void empty_buffer(void);
 
 #endif
+
+// vim: tabstop=2 shiftwidth=2 expandtab:

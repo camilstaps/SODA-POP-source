@@ -1,3 +1,5 @@
+/* Copyright (C) 2017 Camil Staps <pd7lol@camilstaps.nl> */
+
 #ifndef _H_SEGMENTS
 #define _H_SEGMENTS
 
@@ -32,3 +34,5 @@
 #define LED_t   0x72
 
 #endif
+
+// vim: tabstop=2 shiftwidth=2 expandtab:

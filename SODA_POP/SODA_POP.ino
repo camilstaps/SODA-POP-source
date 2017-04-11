@@ -1,5 +1,10 @@
-/*
- * Copyright (C) 2017 Steven Weber KD1JV <steve.kd1jv@gmail.com>
+/**
+ * Copyright (C) 2017 Camil Staps <pd7lol@camilstaps.nl>
+ *
+ * This code is based on The original software by Steven Weber, which was:
+ * Copyright (C) 2017 Steven Weber KD1JV <steve.kd1jv@gmail.com>.
+ *
+ ****************************************************************************
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -11,16 +16,15 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  *
- *In order to compile <Si5351Arduino-master> must be in the Arduino libary. This probram is
- *available from http://www.etherkit.com
+ *****************************************************************************
  *
- *MEGA328P processor 16 MHz
- *Si5351A 3 output clock MOSP10
- *Gray code tuning encoder
- *160 to 17 meter Amatuer radio frequency bands preloaded.
-
- * Pin function:
-
+ * This is software for the SODA POP rig. Fore more information, see the
+ * README.md file.
+ *
+ * In order to compile, <Si5351Arduino-master> must be in the Arduino libary.
+ * This library is available from http://www.etherkit.com.
+ *
+ * Pin functions:
  * A0 - dot paddle
  * A1 - dash paddle
  * A2 - tone
@@ -29,16 +33,15 @@
  * A5 - SCK TWI
  * 13 - TX enable
  *
- *switch input bits locations for sw_input register
- * 0 encoder a
- * 1 encoder b
- * 2 encoder PB
- * 3 unused
- * 4 unused
- * 5 unused
- * 6 Keyer mode switch
+ * Switch input bits locations:
+ * 0 Encoder A
+ * 1 Encoder B
+ * 2 Encoder button
+ * 3 Unused
+ * 4 Unused
+ * 5 Unused
+ * 6 Keyer button
  * 7 RIT
-
  */
 
 #include <EEPROM.h>
@@ -70,13 +73,13 @@ const byte LED_DIGITS[] =
 // register names
 byte memory_pointer;
 
-const int   MUTE = A3;
-const int   TXEN = 13; // production A0
-const int   DASHin = A0;
-const int   DOTin = A1;
+const int MUTE = A3;
+const int TXEN = 13; // production A0
+const int DASHin = A0;
+const int DOTin = A1;
 
 unsigned long IFfreq;
-long          cal_value = 15000;
+long cal_value = 15000;
 
 ISR (TIMER1_COMPA_vect)
 {

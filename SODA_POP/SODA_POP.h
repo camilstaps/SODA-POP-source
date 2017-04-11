@@ -1,3 +1,5 @@
+/* Copyright (C) 2017 Camil Staps <pd7lol@camilstaps.nl> */
+
 #ifndef _H_SODA_POP
 #define _H_SODA_POP
 
@@ -75,3 +77,5 @@ unsigned int dfe_freq;
 #endif
 
 #endif
+
+// vim: tabstop=2 shiftwidth=2 expandtab:

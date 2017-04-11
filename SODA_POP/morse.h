@@ -1,3 +1,5 @@
+/* Copyright (C) 2017 Camil Staps <pd7lol@camilstaps.nl> */
+
 #ifndef _H_MORSE
 #define _H_MORSE
 
@@ -44,3 +46,5 @@
 #define Mquestion 0b1001100 // ?
 
 #endif
+
+// vim: tabstop=2 shiftwidth=2 expandtab:

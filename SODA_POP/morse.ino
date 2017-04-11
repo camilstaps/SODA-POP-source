@@ -1,3 +1,5 @@
+/* Copyright (C) 2017 Camil Staps <pd7lol@camilstaps.nl> */
+
 #include "morse.h"
 
 void morse(byte character)
@@ -22,3 +24,5 @@ void morse(byte character)
 
   delay(state.key.dash_time);
 }
+
+// vim: tabstop=2 shiftwidth=2 expandtab:

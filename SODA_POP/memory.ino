@@ -1,3 +1,5 @@
+/* Copyright (C) 2017 Camil Staps <pd7lol@camilstaps.nl> */
+
 #include "memory.h"
 
 void store_memory(byte nr)
@@ -43,3 +45,5 @@ void empty_buffer()
   for (byte i = 0; i < MEMORY_LENGTH; i++)
     buffer[i] = 0xff;
 }
+
+// vim: tabstop=2 shiftwidth=2 expandtab:

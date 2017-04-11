@@ -1,3 +1,5 @@
+/* Copyright (C) 2017 Camil Staps <pd7lol@camilstaps.nl> */
+
 #include "bands.h"
 
 void nextband(byte up)
@@ -27,3 +29,5 @@ void store_band()
 {
   EEPROM.write(EEPROM_BAND, (byte) state.band);
 }
+
+// vim: tabstop=2 shiftwidth=2 expandtab:

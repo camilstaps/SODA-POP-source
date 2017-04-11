@@ -1,3 +1,5 @@
+/* Copyright (C) 2017 Camil Staps <pd7lol@camilstaps.nl> */
+
 #ifndef _H_KEY
 #define _H_KEY
 
@@ -18,3 +20,5 @@ struct key_state {
 };
 
 #endif
+
+// vim: tabstop=2 shiftwidth=2 expandtab:

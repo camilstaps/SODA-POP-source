@@ -1,3 +1,5 @@
+/* Copyright (C) 2017 Camil Staps <pd7lol@camilstaps.nl> */
+
 #ifndef _H_BANDS
 #define _H_BANDS
 
@@ -56,3 +58,5 @@ const unsigned long BAND_OP_FREQS[] =
   };
 
 #endif
+
+// vim: tabstop=2 shiftwidth=2 expandtab:

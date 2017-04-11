@@ -1,3 +1,5 @@
+/* Copyright (C) 2017 Camil Staps <pd7lol@camilstaps.nl> */
+
 #ifndef _H_DISPLAY
 #define _H_DISPLAY
 
@@ -21,3 +23,5 @@ void invalidate_display(void);
 void toggle_digit(byte i);
 
 #endif
+
+// vim: tabstop=2 shiftwidth=2 expandtab:
