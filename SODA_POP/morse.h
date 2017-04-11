@@ -1,6 +1,8 @@
 #ifndef _H_MORSE
 #define _H_MORSE
 
+#include "SODA_POP.h"
+
 #define MA 0b101    // A
 #define MB 0b11000  // B
 #define MC 0b11010  // C

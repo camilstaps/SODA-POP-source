@@ -13,6 +13,7 @@
 #define LED_N_9 0xd9
 
 #define LED_neg 0x10
+#define LED_question 0x85
 
 #define LED_A   0xf9
 #define LED_C   0xe2
