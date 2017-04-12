@@ -226,7 +226,7 @@ void loop_default()
   unsigned int duration;
 
 #ifdef OPT_DISABLE_DISPLAY
-  if (state.idle_for == -2) // toggle for .5s
+  if (state.idle_for == (unsigned int) -2) // toggle for .5s
     state.idle_for = DISABLE_DISPLAY_AFTER - 500;
 #endif
 
