@@ -2,6 +2,11 @@
 
 #include "memory.h"
 
+/**
+ * Store the buffer in EEPROM.
+ *
+ * @param nr the index to store the message in.
+ */
 void store_memory(byte nr)
 {
   int addr = MEMORY_EEPROM_START + nr * MEMORY_LENGTH;
@@ -9,6 +14,11 @@ void store_memory(byte nr)
     EEPROM.write(addr++, buffer[i]);
 }
 
+/**
+ * Transmit a message memory from EEPROM.
+ *
+ * @param nr the index of the message to send.
+ */
 void transmit_memory(byte nr)
 {
   int addr = MEMORY_EEPROM_START + nr * MEMORY_LENGTH;
@@ -17,6 +27,11 @@ void transmit_memory(byte nr)
   playback_buffer();
 }
 
+/**
+ * Plays the message buffer on the sidetone. This function only takes care of
+ * timing. What actually happens is defined by key_handle_* functions.
+ * See also morse() for a single character.
+ */
 void playback_buffer()
 {
   for (byte i = MEMORY_LENGTH - 1; i; i--) {
@@ -40,6 +55,9 @@ void playback_buffer()
   key_handle_end();
 }
 
+/**
+ * Clear the message buffer.
+ */
 void empty_buffer()
 {
   for (byte i = 0; i < MEMORY_LENGTH; i++)

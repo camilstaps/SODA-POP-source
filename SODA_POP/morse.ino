@@ -2,6 +2,12 @@
 
 #include "morse.h"
 
+/**
+ * Key out a character. This function only takes care of timing. What actually
+ * happens is defined by the key_handle_* functions, according to the state.
+ *
+ * @param character the character to send.
+ */
 void morse(byte character)
 {
   char i;

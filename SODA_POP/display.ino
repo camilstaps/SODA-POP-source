@@ -3,9 +3,13 @@
 #include "display.h"
 
 volatile byte digit_counter = 0;
-
 #define BLINKED_ON ((((byte) tcount) >> 7) & 0x01)
 
+/**
+ * The ISR for the display. Should be called regularly (ideally from a timer
+ * ISR). Multiplexes the display: every time the function is called, one digit
+ * is shown.
+ */
 void display_isr()
 {
   digit_counter = (digit_counter + 1) % 4;
@@ -42,6 +46,9 @@ void display_isr()
     digitalWrite(2, HIGH);
 }
 
+/**
+ * Disable the display by setting the common cathodes high.
+ */
 void disable_display()
 {
   digitalWrite(SLED1, HIGH);
@@ -50,6 +57,9 @@ void disable_display()
   digitalWrite(SLED4, HIGH);
 }
 
+/**
+ * Recompute the display according to the current state.
+ */
 void invalidate_display()
 {
   state.display.blinking = BLINK_NONE;
@@ -130,6 +140,12 @@ void invalidate_display()
   }
 }
 
+/**
+ * Toggle one digit for 100ms.
+ * Also see toggle_display().
+ *
+ * @param i the digit to toggle (3 is leftmost).
+ */
 void toggle_digit(byte i)
 {
   byte d1temp = state.display.digits[i];
@@ -138,6 +154,10 @@ void toggle_digit(byte i)
   state.display.digits[i] = d1temp;
 }
 
+/**
+ * Turn the display off for 100ms, then turn it back on.
+ * Also see toggle_digit().
+ */
 void toggle_display()
 {
   byte temp[5];
@@ -159,6 +179,10 @@ void toggle_display()
   state.display.dots = temp[4];
 }
 
+/**
+ * Displays the code speed in WPM on the last two digits and a dot before these
+ * digits. The other digits are unchanged.
+ */
 void display_cs()
 {
   state.display.digits[0] = LED_DIGITS[state.key.speed % 10];
@@ -166,6 +190,10 @@ void display_cs()
   state.display.dots = 0x4;
 }
 
+/**
+ * Displays `r` and the RIT offset in kHz.
+ * Above 9.9 and below -9.9, the display overflows.
+ */
 void display_rit()
 {
   unsigned long offset;
@@ -187,6 +215,10 @@ void display_rit()
   state.display.blinking = tuning_blinks[state.tuning_step];
 }
 
+/**
+ * Displays the current frequency in kHz.
+ * Blinks a digit when the tuning step is set large.
+ */
 void display_freq()
 {
   // First divide by 100 to remove the fractional Hz digits
@@ -203,10 +235,15 @@ void display_freq()
 }
 
 #ifdef OPT_DFE
+/**
+ * Displays `dFE.` when no digit has been keyed in yet in DFE mode.
+ * After this, displays the frequency that is being keyed in, blinking the
+ * current digit.
+ */
 void display_dfe()
 {
   if (dfe_position == 3) {
-    state.display.digits[3] = LED_D;
+    state.display.digits[3] = LED_d;
     state.display.digits[2] = LED_F;
     state.display.digits[1] = LED_E;
     state.display.digits[0] = 0x00;
@@ -224,6 +261,9 @@ void display_dfe()
 }
 #endif
 
+/**
+ * Displays `bn.` and two digits for the current band (see bands.h)
+ */
 void display_band()
 {
   state.display.digits[3] = LED_N_6;

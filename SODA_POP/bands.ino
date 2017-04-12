@@ -2,6 +2,11 @@
 
 #include "bands.h"
 
+/**
+ * Switch to another band. The display and frequencies are updated.
+ *
+ * @param up: 0 to go down (lower frequency), anything else to go up
+ */
 void nextband(byte up)
 {
   if (up)
@@ -14,17 +19,21 @@ void nextband(byte up)
     state.band = (enum band) 0;
 
   setup_band();
-
   invalidate_display();
-  invalidate_frequencies();
 }
 
+/**
+ * Update frequencies after a band change.
+ */
 void setup_band()
 {
   state.op_freq = BAND_OP_FREQS[state.band];
   invalidate_frequencies();
 }
 
+/**
+ * Store the current band in the EEPROM.
+ */
 void store_band()
 {
   EEPROM.write(EEPROM_BAND, (byte) state.band);

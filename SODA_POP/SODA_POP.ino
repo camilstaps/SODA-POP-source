@@ -70,7 +70,6 @@ const byte LED_DIGITS[] =
   { LED_N_0, LED_N_1, LED_N_2, LED_N_3, LED_N_4
   , LED_N_5, LED_N_6, LED_N_7, LED_N_8, LED_N_9};
 
-// register names
 byte memory_pointer;
 
 const int MUTE = A3;
@@ -86,6 +85,11 @@ ISR (TIMER1_COMPA_vect)
   TIMER1_SERVICE_ROUTINE();
 }
 
+/**
+ * Arduino's initialisation routine.
+ * Sets up the device's state, the Si5351, and loads persistsent settings from
+ * the EEPROM.
+ */
 void setup()
 {
   state.state = S_STARTUP;
@@ -132,7 +136,7 @@ void setup()
     state.state = S_CALIBRATION_CORRECTION;
   }
 
-  cal_data(); //load calibration data
+  fetch_calibration_data(); //load calibration data
   si5351.set_correction(cal_value); //correct the clock chip error
   state.tuning_step = 0;
   setup_band();
@@ -147,6 +151,10 @@ void setup()
     state.key.mode = KEY_STRAIGHT;
 }
 
+/**
+ * Arduino's main loop. Checks what state we are in and calls the corresponding
+ * loop_* function.
+ */
 void loop()
 {
   switch (state.state) {
@@ -175,6 +183,28 @@ void loop()
   }
 }
 
+/**
+ * Loop for the S_DEFAULT state. From here, all functions can be enabled
+ * through the buttons.
+ *
+ * Paddle or straight key enter the S_KEYING state.
+ *
+ * Rotary encoder:
+ * - Turning adjusts the frequencies in the current step size.
+ * - Pressing rotates through tuning step sizes (see tuning_steps).
+ * - Holding for 1s enters S_DFE (when compiled with OPT_DFE and using paddle).
+ *
+ * Keyer:
+ * - Pressing moves to S_MEM_SEND_WAIT, to transmit a message memory.
+ * - Holding for 0.5s moves to S_ADJUST_CS, to adjust keying speed.
+ * - Holding for 2s moves to S_MEM_ENTER_WAIT, to enter a message memory.
+ *
+ * RIT:
+ * - Pressing en/disables RIT.
+ * - Holding for 2s moves to S_CHANGE_BAND (compile with OPT_BAND_SELECT).
+ * - Holding for 5s enters the calibration routine (S_CALIBRATION_CORRECTION).
+ * - Holding for 8s erases the EEPROM settings (compile with OPT_ERASE_EEPROM).
+ */
 void loop_default()
 {
   unsigned int duration;
@@ -250,6 +280,10 @@ void loop_default()
   }
 }
 
+/**
+ * Loop for the S_KEYING state. In this state, buttons are disabled, and the
+ * keying routing for paddle or straight key is called.
+ */
 void loop_keying()
 {
   if (state.key.mode == KEY_IAMBIC) {
@@ -259,21 +293,23 @@ void loop_keying()
   }
 }
 
+/**
+ * Loop for the S_ADJUST_CS state. In this state, the key speed can be changed
+ * using the rotary encoder and/or paddle.
+ * The keyer switch selects the speed and returns to S_DEFAULT.
+ */
 void loop_adjust_cs()
 {
-  // Rotary encoder
   if (rotated_up()) {
     adjust_cs(1);
   } else if (rotated_down()) {
     adjust_cs(-1);
-  // Paddle
-  } else if (!digitalRead(DASHin)) {
+  } else if (state.key.mode == KEY_IAMBIC && !digitalRead(DASHin)) {
     adjust_cs(1);
     delay(200);
-  } else if (!digitalRead(DOTin)) {
+  } else if (state.key.mode == KEY_IAMBIC && !digitalRead(DOTin)) {
     adjust_cs(-1);
     delay(200);
-  // Exiting
   } else if (state.inputs.keyer) {
     state.state = S_DEFAULT;
     load_cw_speed();
@@ -283,14 +319,18 @@ void loop_adjust_cs()
   }
 }
 
+/**
+ * Loop for the S_CHANGE_BAND and S_CALIBRATION_CHANGE_BAND states. In these
+ * states, the user can select the operating band using the rotary encoder.
+ * The keyer switch moves on to S_DEFAULT (when in S_CHANGE_BAND) or
+ * S_CALIBRATION_PEAK_RX (when in S_CALIBRATION_CHANGE_BAND).
+ */
 void loop_change_band()
 {
-  // Change with rotary encoder
   if (rotated_up()) {
     nextband(1);
   } else if (rotated_down()) {
     nextband(0);
-  // Save with keyer
   } else if (state.inputs.keyer) {
     store_band();
 
@@ -308,6 +348,16 @@ void loop_change_band()
 }
 
 #ifdef OPT_DFE
+/**
+ * Loop for the S_DFE state for direct frequency entry. In this state, the user
+ * can enter a new frequency using the paddle.
+ * When a new character has been detected (using keying routines), that
+ * character is parsed as a number or abbreviation of a number. The digit is
+ * set, the system moves on to the next digit. When an incorrect character was
+ * detected, a question mark is sounded on the sidetone.
+ * The RIT switch cancels the DFE and returns to S_DEFAULT.
+ * The keyer switch sets the remaining digits to 0 and returns to S_DEFAULT.
+ */
 void loop_dfe()
 {
   if (dfe_character != 0xff) {
@@ -366,15 +416,29 @@ void loop_dfe()
   }
 }
 
+/**
+ * Sets the frequency according to the recorded frequency in S_DFE state.
+ * The operating frequency is fixed between the band limits.
+ * The system returns to S_DEFAULT state.
+ */
 void set_dfe()
 {
   state.op_freq = (BAND_LIMITS_LOW[state.band] / 10000000) * 10000000;
   state.op_freq += ((unsigned long) dfe_freq) * 10000;
   fix_op_freq();
+  invalidate_frequencies();
   state.state = S_DEFAULT;
 }
 #endif
 
+/**
+ * Loop for the S_MEM_ENTER_WAIT state. In this state, the user can start
+ * entering a new message memory.
+ * When this state is entered with a straight key, the system returns to
+ * S_DEFAULT state, since CW detection is not implemented for straight keys.
+ * The keyer switch returns to the S_DEFAULT state.
+ * The paddle moves on to the S_MEM_ENTER state.
+ */
 void loop_mem_enter_wait()
 {
   memory_pointer = 0;
@@ -389,7 +453,21 @@ void loop_mem_enter_wait()
   }
 }
 
+/**
+ * Timer variable for loop_mem_enter(), keeping track of how long the key has
+ * been inactive in order to insert word breaks.
+ */
 unsigned long quiet_since;
+
+/**
+ * Loop for the S_MEM_ENTER state. In this state, the user is keying in a new
+ * message memory.
+ * The keyer switch moves on to the S_MEM_ENTER_REVIEW state and plays the
+ * recorded message to the user.
+ * When the paddle is used, the new character is recorded.
+ * When the paddle has not been used for 3 * the dash time, a word break is
+ * recorded. No consecutive word breaks are recorded.
+ */
 void loop_mem_enter()
 {
   if (state.inputs.keyer) {
@@ -408,6 +486,14 @@ void loop_mem_enter()
   }
 }
 
+/**
+ * Loop for the S_MEM_ENTER_REVIEW state. In this state, the user has just
+ * heard the memory as he entered it.
+ * Either side of the paddle stores the message in memory (depending on the
+ * side of the paddle that was pressed).
+ * The keyer switch returns to the S_MEM_ENTER_WAIT state, discarding the
+ * entry. To return to the S_DEFAULT, press keyer again.
+ */
 void loop_mem_enter_review()
 {
   if (digitalRead(DASHin) == LOW) {
@@ -434,6 +520,13 @@ void loop_mem_enter_review()
   }
 }
 
+/**
+ * Loop for the S_MEM_SEND_WAIT state. In this state, the user can choose the
+ * memory to send using either side of the paddle. When using a straight key,
+ * the device picks the dot-memory automatically. Picking a memory moves to the
+ * S_MEM_SEND_TX state, transmits the memory and returns to S_DEFAULT.
+ * The keyer switch returns to the S_DEFAULT state.
+ */
 void loop_mem_send_wait()
 {
   // Paddle chooses a memory
@@ -455,6 +548,11 @@ void loop_mem_send_wait()
   }
 }
 
+/**
+ * Loop for the S_ERROR state. In this state, an alarm is sounded on the
+ * sidetone. There is no recovery from this state except for turning off the
+ * device.
+ */
 void loop_error()
 {
   for (unsigned int f = 400; f < 1000; f += 10) {
@@ -465,6 +563,13 @@ void loop_error()
   delay(450);
 }
 
+/**
+ * Loop for the S_CALIBRATION_CORRECTION state. In this state, the required
+ * Si5351 correction value is found by the user by turning the rotary encoder
+ * and fixing the frequency on TP3 to 10MHz.
+ * The keyer switch stores the correction value to EEPROM and moves on to the
+ * S_CALIBRATION_PEAK_IF state.
+ */
 void loop_calibration_correction()
 {
   if (state.inputs.keyer) {
@@ -487,6 +592,12 @@ void loop_calibration_correction()
   }
 }
 
+/**
+ * Loop for the S_CALIBRATION_PEAK_IF state. In this state, the user can adjust
+ * the IF frequency using the rotary encoder to peak the signal.
+ * The keyer switch saves the frequency to the EEPROM and moves on to the
+ * S_CALIBRATION_CHANGE_BAND state.
+ */
 void loop_calibration_peak_if()
 {
   if (state.inputs.keyer) {
@@ -510,6 +621,11 @@ void loop_calibration_peak_if()
   }
 }
 
+/**
+ * Loop for the S_CALIBRATION_PEAK_RX state. In this state, the user can trim
+ * CT1 and CT2 to peak the signal.
+ * The keyer switch returns to S_DEFAULT.
+ */
 void loop_calibration_peak_rx()
 {
   if (state.inputs.keyer) {
@@ -521,22 +637,24 @@ void loop_calibration_peak_rx()
   }
 }
 
-void freq_adjust(long step)
+/**
+ * The Timer1 ISR. Keeps track of a global timer, tcount, and calls ISRs for
+ * all parts of the system.
+ * See also key_isr(), buttons_isr() and display_isr().
+ */
+void TIMER1_SERVICE_ROUTINE()
 {
-  state.op_freq += step;
-  fix_op_freq();
-  invalidate_display();
-  invalidate_frequencies();
+  ++tcount;
+  key_isr();
+  disable_display();
+  buttons_isr();
+  display_isr();
 }
 
-void fix_op_freq()
-{
-  if (state.op_freq > BAND_LIMITS_HIGH[state.band])
-    state.op_freq = BAND_LIMITS_HIGH[state.band];
-  if (state.op_freq < BAND_LIMITS_LOW[state.band])
-    state.op_freq = BAND_LIMITS_LOW[state.band];
-}
-
+/**
+ * Rotate through the tuning steps. The display is updated.
+ * See tuning_steps.
+ */
 void rotate_tuning_steps()
 {
   state.tuning_step++;
@@ -545,24 +663,17 @@ void rotate_tuning_steps()
   invalidate_display();
 }
 
-/*
- * timer outside of the normal Ardinu timers
- * does keyer timing and port D mulitplexing for display and
- * switch inputs.
+/**
+ * Used for detecting morse characters when using the paddle.
  */
-void TIMER1_SERVICE_ROUTINE()
-{
-  ++tcount;
-
-  key_isr();
-
-  disable_display();
-  buttons_isr();
-  display_isr();
-}
-
 byte morse_char;
 
+/**
+ * Handle the start of a morse character. This enables mute. When in TX mode,
+ * the RX clock is disabled and the TX is enabled. The detected character is
+ * reset.
+ * Also see key_handle_end();
+ */
 void key_handle_start()
 {
   morse_char = 0x01;
@@ -572,6 +683,11 @@ void key_handle_start()
     enable_rx_tx(RX_OFF_TX_ON);
 }
 
+/**
+ * Handle the end of a morse character. This disables mute, enables RX and
+ * disables TX. In MEM_ENTER mode, the detected character is stored.
+ * Also see key_handle_start().
+ */
 void key_handle_end()
 {
   digitalWrite(MUTE, LOW);
@@ -595,6 +711,11 @@ void key_handle_end()
 #endif
 }
 
+/**
+ * Handle a dash. In TX modes, this will enable TXEN. In other cases, the
+ * detected character is updated. The sidetone will be enabled.
+ * Also see key_handle_dot() and key_handle_dashdot_end().
+ */
 void key_handle_dash()
 {
   SIDETONE_ENABLE();
@@ -604,6 +725,9 @@ void key_handle_dash()
     morse_char = (morse_char << 1) | 0x01;
 }
 
+/**
+ * See key_handle_dash().
+ */
 void key_handle_dot()
 {
   SIDETONE_ENABLE();
@@ -613,12 +737,21 @@ void key_handle_dot()
     morse_char <<= 1;
 }
 
+/**
+ * Handle the end of a dash or dot.
+ * See key_handle_dash() and key_handle_dot().
+ */
 void key_handle_dashdot_end()
 {
   SIDETONE_DISABLE();
   digitalWrite(TXEN, LOW);
 }
 
+/**
+ * Handle enabling of the straight key. The straight key is always in TX mode,
+ * so no state checking here (compare to the key_* routines).
+ * Also see straight_key_handle_disable().
+ */
 void straight_key_handle_enable()
 {
   SIDETONE_ENABLE();
@@ -627,6 +760,9 @@ void straight_key_handle_enable()
   digitalWrite(TXEN, HIGH);
 }
 
+/**
+ * See straight_key_handle_enable().
+ */
 void straight_key_handle_disable()
 {
   digitalWrite(TXEN, LOW);
@@ -637,13 +773,20 @@ void straight_key_handle_disable()
   state.state = S_DEFAULT;
 }
 
+/**
+ * Set the calibratioin of the Si5351 chip and reset the frequency to 10MHz for
+ * calibration purposes.
+ */
 void calibration_set_correction()
 {
   si5351.set_correction(cal_value);
   si5351.set_freq(1000000000, 0ull, SI5351_CLK1);
 }
 
-void cal_data()
+/**
+ * Fetch calibration data from EEPROM.
+ */
+void fetch_calibration_data()
 {
   unsigned long temp = 0;
 
@@ -667,6 +810,12 @@ void cal_data()
   cal_value = cal_value + temp;
 }
 
+/**
+ * Enable/disable the RX and TX clocks. This is faster than
+ * Si5351::output_enable().
+ *
+ * @param option one of RX_ON_TX_ON, RX_OFF_TX_ON, RX_ON_TX_OFF, RX_OFF_TX_OFF.
+ */
 void enable_rx_tx(byte option)
 {
   Wire.beginTransmission(0x60);
@@ -675,6 +824,36 @@ void enable_rx_tx(byte option)
   Wire.endTransmission();
 }
 
+/**
+ * Adjust the operating frequency by an offset.
+ * The display and Si5351 frequencies are updated.
+ *
+ * @param step the offset.
+ */
+void freq_adjust(long step)
+{
+  state.op_freq += step;
+  fix_op_freq();
+  invalidate_display();
+  invalidate_frequencies();
+}
+
+/**
+ * Fix the operating frequency between the band limits.
+ */
+void fix_op_freq()
+{
+  if (state.op_freq > BAND_LIMITS_HIGH[state.band])
+    state.op_freq = BAND_LIMITS_HIGH[state.band];
+  if (state.op_freq < BAND_LIMITS_LOW[state.band])
+    state.op_freq = BAND_LIMITS_LOW[state.band];
+}
+
+/**
+ * Reset the frequencies (both RX and TX) used by the Si5351 chip. This
+ * function should be called any time something frequency-related happens, s.t.
+ * it is not needed in keying routines (to make their response time lower).
+ */
 void invalidate_frequencies()
 {
   unsigned long freq;
@@ -691,6 +870,9 @@ void invalidate_frequencies()
 }
 
 #ifdef OPT_STORE_CW_SPEED
+/**
+ * Store the key speed in EEPROM.
+ */
 void store_cw_speed()
 {
   EEPROM.write(EEPROM_CW_SPEED, state.key.speed);
@@ -698,6 +880,9 @@ void store_cw_speed()
 #endif
 
 #ifdef OPT_ERASE_EEPROM
+/**
+ * Erase settings from EEPROM. This does not clear the message memories.
+ */
 void ee_erase()
 {
   for (byte i=0; i<=7; i++)
@@ -709,6 +894,10 @@ void ee_erase()
 }
 #endif
 
+/**
+ * Enter the error state. This error is non-recoverable and should only be used
+ * in very rare cases.
+ */
 void error()
 {
   state.state = S_ERROR;

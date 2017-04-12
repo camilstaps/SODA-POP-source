@@ -2,6 +2,12 @@
 
 #include "key.h"
 
+/**
+ * Change the paddle speed according to the parameter, withing the
+ * KEY_MIN_SPEED .. KEY_MAX_SPEED range (inclusive).
+ *
+ * @param adjustment the adjustment to the speed in WPM.
+ */
 void adjust_cs(byte adjustment)
 {
   state.key.speed += adjustment;
@@ -12,12 +18,21 @@ void adjust_cs(byte adjustment)
   invalidate_display();
 }
 
+/**
+ * Set up the CW speed as in state.key.speed. This modifies the dot_time and
+ * dash_time accordingly.
+ */
 void load_cw_speed()
 {
   state.key.dot_time = 1200u / ((unsigned int) state.key.speed);
   state.key.dash_time = state.key.dot_time * 3;
 }
 
+/**
+ * Checks whether the key (either straight or paddle) is active.
+ *
+ * @return 0 if inactive, something else if active.
+ */
 byte key_active()
 {
   return (state.key.mode == KEY_STRAIGHT && digitalRead(DOTin) == LOW)
@@ -25,6 +40,10 @@ byte key_active()
         (digitalRead(DOTin) == LOW || digitalRead(DASHin) == LOW));
 }
 
+/**
+ * Handles a straight key. Simply calls straight_key_handle_enable() when it is
+ * pressed, and straight_key_handle_disable() when it is released.
+ */
 void straight_key()
 {
   if (digitalRead(DOTin) == HIGH)
@@ -38,6 +57,9 @@ void straight_key()
   straight_key_handle_disable();
 }
 
+/**
+ * The ISR for the keyer. Should be called every 1ms, to ensure proper timing.
+ */
 void key_isr()
 {
   if (state.key.timer > 0)
@@ -45,6 +67,11 @@ void key_isr()
       state.key.timeout = 1;
 }
 
+/**
+ * Keys one character using the iambic keying method. This function only does
+ * timing. What actually happens is defined by key_handle_dash(),
+ * key_handle_dot() and key_handle_dashdot_end(), depending on the state.
+ */
 void iambic_key()
 {
   byte repeat = 1;
@@ -83,6 +110,11 @@ void iambic_key()
   key_handle_end();
 }
 
+/**
+ * Handle one dash. This function only does timing and iambic keying. What
+ * actually happens is defined by key_handle_dash() and
+ * key_handle_dashdot_end(), depending on the current state.
+ */
 void dash()
 {
   key_handle_dash();
@@ -99,6 +131,9 @@ void dash()
   wait_check_dot();
 }
 
+/**
+ * Wait for a key timeout and update the dot status.
+ */
 void wait_check_dot()
 {
   do {
@@ -108,6 +143,11 @@ void wait_check_dot()
   } while (!state.key.timeout);
 }
 
+/**
+ * Handle one dot. This function only does timing and iambic keying. What
+ * actually happens is defined by key_handle_dot() and
+ * key_handle_dashdot_end(), depending on the current state.
+ */
 void dot()
 {
   key_handle_dot();
@@ -124,6 +164,9 @@ void dot()
   wait_check_dash();
 }
 
+/**
+ * Wait for a key timeout and update the dash status.
+ */
 void wait_check_dash()
 {
   do {
