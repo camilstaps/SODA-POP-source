@@ -1,19 +1,19 @@
 digraph {
-	startup[label="Startup"];
-	default[label="Default", width=1.5, height=1.5];
-	keying[label="Keying"];
-	adjust_cs[label="Adjust CS"];
-	change_band[label="Change Band"];
-	dfe[label="DFE"];
-	mem_send_wait[label="Mem Send Wait"];
-	mem_send_tx[label="Mem Send TX"];
-	mem_enter_wait[label="Mem Enter Wait"];
-	mem_enter[label="Mem Enter"];
-	mem_enter_review[label="Mem Enter Review"];
-	cal_correction[label="Cal. Correction"];
-	cal_peak_if[label="Cal. Peak IF"];
-	cal_change_band[label="Cal. Change Band"];
-	cal_peak_rx[label="Cal. Peak RX"];
+	startup [label="Startup"];
+	default [label="Default", width=1.5, height=1.5];
+	keying [label="Keying"];
+	adjust_cs [label="Adjust CS"];
+	change_band [label="Change Band", style="dashed"];
+	dfe [label="DFE", style="dashed"];
+	mem_send_wait [label="Mem Send Wait"];
+	mem_send_tx [label="Mem Send TX"];
+	mem_enter_wait [label="Mem Enter Wait"];
+	mem_enter [label="Mem Enter"];
+	mem_enter_review [label="Mem Enter Review"];
+	cal_correction [label="Cal. Correction"];
+	cal_peak_if [label="Cal. Peak IF"];
+	cal_change_band [label="Cal. Change Band"];
+	cal_peak_rx [label="Cal. Peak RX"];
 
 	startup -> default;
 
@@ -26,13 +26,13 @@ digraph {
 	adjust_cs:s -> adjust_cs:s [label="Up/down/paddle"];
 	adjust_cs -> default [label="Keyer"];
 
-	default -> change_band [label="RIT (2s)"];
-	change_band:s -> change_band:s [label="Up/down"];
-	change_band -> default [label="Keyer"];
+	default -> change_band [label="RIT (2s)", style="dashed"];
+	change_band:s -> change_band:s [label="Up/down", style="dashed"];
+	change_band -> default [label="Keyer", style="dashed"];
 
-	default -> dfe [label="Encoder (1s)"];
-	dfe:s -> dfe:s [label="Paddle"];
-	dfe -> default [label="RIT/Keyer"];
+	default -> dfe [label="Encoder (1s)", style="dashed"];
+	dfe:s -> dfe:s [label="Paddle", style="dashed"];
+	dfe -> default [label="RIT/Keyer", style="dashed"];
 
 	default -> mem_send_wait [label="Keyer", constraint=false];
 	mem_send_wait -> default [label="Keyer"];

@@ -23,6 +23,7 @@ file.
 To a large extent, operation is as described in the manual.
 It can be described by the state machine below.
 A detailed description is given under the image.
+Dashed states and edges are [optional features](#optional-features).
 
 ![State machine](README/states.png)
 
@@ -40,7 +41,8 @@ It is only available when a paddle is connected. The display will read `DFE`.
 Key in the desired frequency. The current digit blinks. Save with the keyer
 switch or cancel with the RIT switch. When all four digits are entered, the
 new frequency is saved automatically. Abbreviations can be used for 0 (T) and 9
-(N) and for all numbers when enabled (see under 'Optional features').
+(N) and for all numbers when enabled (see under
+[Optional features](#optional-features)).
 
 ### RIT
 Pressing the RIT button turns RIT on. The display will show the RIT offset.
@@ -69,7 +71,8 @@ to change, and save with the keyer switch.
 
 Change the band by holding the RIT switch for 2s. The display will read
 `bn.20`, where `20` is the band. Save with the keyer switch. This is only
-possible when compiled with `OPT_BAND_SELECT` (see 'Optional features' below).
+possible when compiled with `OPT_BAND_SELECT` (see
+[Optional features](#optional-features) below).
 
 ### Calibration
 The calibration routine is explained in the manual. Hold the RIT switch for 5s
@@ -132,6 +135,12 @@ done by adding and removing `#define` lines to `settings.h`.
   | B | 6
   | G | 7
   | D | 8
+- `OPT_DISABLE_DISPLAY`: disables the display when in default state after a
+  preset time (default: 2.5s). The buttons still work and when something
+  happens the display turns on again. The encoder button enables the display
+  without doing anything else. The display will blink for 0.5s approximately
+  every 30s to prevent you from leaving the rig on by accident.
+  This saves about 2.5mA (on 59mA total in RX mode).
 
 ## How to flash the firmware
 
@@ -171,6 +180,10 @@ Some images of the connections:
 
 ## Changelog
 
+- 2017-04-12:
+	- Added `OPT_DISABLE_DISPLAY` (issue [#5](/../../issues/5)) (saves ~2.5mA)
+	- More power saving by entering sleep mode at the end of `loop()` (~6mA)
+	- Added comments to clarify the code
 - 2017-04-11:
 	- Rewrote all code to a state machine
 	- Fixed a bug with entering memory

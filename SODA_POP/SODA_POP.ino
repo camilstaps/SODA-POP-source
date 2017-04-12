@@ -46,6 +46,9 @@
 
 #include <EEPROM.h>
 #include <Wire.h>
+#include <avr/power.h>
+#include <avr/sleep.h>
+
 #include <si5351.h>
 
 #include "SODA_POP.h"
@@ -149,6 +152,12 @@ void setup()
 
   if (digitalRead(DASHin) == LOW)
     state.key.mode = KEY_STRAIGHT;
+
+  power_adc_disable();
+  power_spi_disable();
+  power_timer0_disable();
+  power_timer2_disable();
+  set_sleep_mode(SLEEP_MODE_IDLE);
 }
 
 /**
@@ -181,6 +190,13 @@ void loop()
       error();
       break;
   }
+
+#ifdef OPT_DISABLE_DISPLAY
+  if (state.state != S_DEFAULT)
+    state.idle_for = -1;
+#endif
+
+  sleep_mode();
 }
 
 /**
@@ -208,13 +224,25 @@ void loop()
 void loop_default()
 {
   unsigned int duration;
+
+#ifdef OPT_DISABLE_DISPLAY
+  if (state.idle_for == -2) // toggle for .5s
+    state.idle_for = DISABLE_DISPLAY_AFTER - 500;
+#endif
+
   if (key_active()) {
     state.state = S_KEYING;
   // Tuning with the rotary encoder
   } else if (rotated_up()) {
     freq_adjust(tuning_steps[state.tuning_step]);
+#ifdef OPT_DISABLE_DISPLAY
+    state.idle_for = -1;
+#endif
   } else if (rotated_down()) {
     freq_adjust(-tuning_steps[state.tuning_step]);
+#ifdef OPT_DISABLE_DISPLAY
+    state.idle_for = -1;
+#endif
   } else if (state.inputs.encoder_button) {
     duration = time_encoder_button();
 #ifdef OPT_DFE
@@ -231,7 +259,14 @@ void loop_default()
     } else
 #endif
     if (duration > 50) {
+#ifdef OPT_DISABLE_DISPLAY
+      if (state.idle_for >= DISABLE_DISPLAY_AFTER)
+        state.idle_for = -1;
+      else
+        rotate_tuning_steps();
+#else
       rotate_tuning_steps();
+#endif
     }
   // Keyer switch for memory and code speed
   } else if (state.inputs.keyer) {
@@ -252,6 +287,9 @@ void loop_default()
 #ifdef OPT_ERASE_EEPROM
     if (duration > 8000) {
       ee_erase();
+#ifdef OPT_DISABLE_DISPLAY
+      state.idle_for = -1;
+#endif
     } else
 #endif
     if (duration > 5000) {
@@ -276,6 +314,9 @@ void loop_default()
         state.rit_tx_freq = state.op_freq;
       }
       invalidate_display();
+#ifdef OPT_DISABLE_DISPLAY
+      state.idle_for = -1;
+#endif
     }
   }
 }
@@ -645,6 +686,10 @@ void loop_calibration_peak_rx()
 void TIMER1_SERVICE_ROUTINE()
 {
   ++tcount;
+#ifdef OPT_DISABLE_DISPLAY
+  if (state.state == S_DEFAULT)
+    state.idle_for++;
+#endif
   key_isr();
   disable_display();
   buttons_isr();

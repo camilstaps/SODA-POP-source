@@ -12,6 +12,10 @@ volatile byte digit_counter = 0;
  */
 void display_isr()
 {
+#ifdef OPT_DISABLE_DISPLAY
+  if (state.state == S_DEFAULT && state.idle_for >= DISABLE_DISPLAY_AFTER)
+    return;
+#endif
   digit_counter = (digit_counter + 1) % 4;
 
   PORTD = 0x00;

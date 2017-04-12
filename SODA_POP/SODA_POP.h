@@ -48,6 +48,8 @@ struct soda_pop {
 
   struct display display;
   struct inputs inputs;
+
+  unsigned int idle_for;
 };
 
 static struct soda_pop state;
