@@ -155,7 +155,6 @@ void setup()
 
   power_adc_disable();
   power_spi_disable();
-  power_timer0_disable();
   power_timer2_disable();
   set_sleep_mode(SLEEP_MODE_IDLE);
 }
@@ -260,12 +259,11 @@ void loop_default()
 #endif
     if (duration > 50) {
 #ifdef OPT_DISABLE_DISPLAY
-      if (state.idle_for >= DISABLE_DISPLAY_AFTER)
-        state.idle_for = -1;
-      else
-        rotate_tuning_steps();
-#else
+      if (!(state.idle_for >= DISABLE_DISPLAY_AFTER))
+#endif
       rotate_tuning_steps();
+#ifdef OPT_DISABLE_DISPLAY
+      state.idle_for = -1;
 #endif
     }
   // Keyer switch for memory and code speed
