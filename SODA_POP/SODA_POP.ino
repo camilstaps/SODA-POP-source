@@ -701,7 +701,7 @@ void TIMER1_SERVICE_ROUTINE()
 void rotate_tuning_steps()
 {
   state.tuning_step++;
-  if (state.tuning_step >= sizeof(tuning_steps))
+  if (state.tuning_step >= sizeof(tuning_blinks))
     state.tuning_step = 0;
   invalidate_display();
 }

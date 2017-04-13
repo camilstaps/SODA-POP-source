@@ -11,7 +11,7 @@
 #define MEMORY_LENGTH        64 /* Length of memories, including spacing */
 #define MEMORY_EEPROM_START  16 /* Start of memory block in EEPROM */
 
-/* The tuning steps (rotated through with the encoder button), in mHz */
+/* The tuning steps (rotated through with the encoder button) in mHz (max 8) */
 #define TUNING_STEPS       {5000,       20000,   100000,  1000000}
 /* Which digit to blink for each of these tuning steps */
 #define TUNING_STEP_DIGITS {BLINK_NONE, BLINK_0, BLINK_1, BLINK_2}

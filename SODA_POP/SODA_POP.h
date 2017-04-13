@@ -44,7 +44,7 @@ struct soda_pop {
   unsigned long rit_tx_freq;
 
   unsigned char rit:1;
-  unsigned char tuning_step:2;
+  unsigned char tuning_step:3;
 
   struct display display;
   struct inputs inputs;
