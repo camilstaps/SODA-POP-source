@@ -155,7 +155,6 @@ void setup()
 
   power_adc_disable();
   power_spi_disable();
-  power_timer2_disable();
   set_sleep_mode(SLEEP_MODE_IDLE);
 }
 
