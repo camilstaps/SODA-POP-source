@@ -57,8 +57,8 @@ static unsigned long tcount;
 
 static char buffer[MEMORY_LENGTH];
 
-const long tuning_steps[] = {5000, 20000, 100000, 1000000};
-const byte tuning_blinks[] = {BLINK_NONE, BLINK_0, BLINK_1, BLINK_2};
+const long tuning_steps[] = TUNING_STEPS;
+const byte tuning_blinks[] = TUNING_STEP_DIGITS;
 
 #define TX_FREQ(state) (state.rit ? state.rit_tx_freq : state.op_freq)
 

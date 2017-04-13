@@ -64,7 +64,7 @@ once more returns to the default state.
 The maximum message length is 64 by default (can be changed in `settings.h`).
 If you try to enter more characters, the error routine is enabled (see below).
 
-### Settings
+### Preferences
 Change the code speed by holding the keyer switch for 2s. The display will read
 `CS.20`, where `20` is the speed in WPM. Use the paddle or the rotary encoder
 to change, and save with the keyer switch.
@@ -113,6 +113,11 @@ uploading the code to the chip.
   spaces (64). Higher values than 255 are unsupported.
 - `MEMORY_EEPROM_START`: the start address of the memory in EEPROM (16). Don't
   change this unless you know what you're doing.
+- `TUNING_STEPS`: an array of tuning steps in mHz. These steps are rotated
+  through with the encoder button.
+- `TUNING_STEP_DIGITS`: which digit to blink when in a tuning step. An array of
+  the same length as `TUNING_STEPS`. Values should be taken from `BLINK_NONE`,
+  `BLINK_0`, `_1`, `_2` and `_3` (`0` is the rightmost digit).
 
 ## Optional features
 There are several features that can be added to the rig if you want to. This is
@@ -180,6 +185,8 @@ Some images of the connections:
 
 ## Changelog
 
+- 2017-04-13:
+	- Made tuning steps an option in `settings.h`
 - 2017-04-12:
 	- Added `OPT_DISABLE_DISPLAY` (issue [#5](/../../issues/5)) (saves ~2.5mA)
 	- More power saving by entering sleep mode at the end of `loop()` (~6mA)
