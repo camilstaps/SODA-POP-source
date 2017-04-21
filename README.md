@@ -56,13 +56,17 @@ To update the memory, hold the keyer switch for 5s. The display will say
 `Entr.`. Enter the message using the paddle. This is not possible with a
 straight key. The display will flash once after a character space is detected,
 and once again after a word space has been detected. To finish, press the keyer
-switch again. The message will be played back while the display reads `Ent.?`.
-After this, store the message with either side of the paddle. Pressing the
-keyer switch allows you to key in a message again; pressing the keyer switch
-once more returns to the default state.
+switch again. The message will be played back while the display reads `St.?`
+(from 'store'). After this, store the message with either side of the paddle.
+Pressing the keyer switch allows you to key in a message again; pressing the
+keyer switch once more returns to the default state.
 
 The maximum message length is 64 by default (can be changed in `settings.h`).
 If you try to enter more characters, the error routine is enabled (see below).
+
+Using `OPT_MORE_MEMORIES`, it is possible to use up to 10 messages, that can be
+selected using the rotary encoder. See under
+[Optional features](#optional-features).
 
 ### Preferences
 Change the code speed by holding the keyer switch for 2s. The display will read
