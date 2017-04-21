@@ -24,6 +24,7 @@
 #define LED_I   LED_N_1
 #define LED_L   0x62
 #define LED_P   0xf1
+#define LED_S   LED_N_5
 #define LED_X   0x79
 #define LED_c   0x32
 #define LED_d   0x3b
@@ -31,6 +32,10 @@
 #define LED_o   0x3a
 #define LED_r   0x30
 #define LED_t   0x72
+
+const byte LED_DIGITS[] =
+  { LED_N_0, LED_N_1, LED_N_2, LED_N_3, LED_N_4
+  , LED_N_5, LED_N_6, LED_N_7, LED_N_8, LED_N_9};
 
 #endif
 

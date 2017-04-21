@@ -146,6 +146,9 @@ done by adding and removing `#define` lines to `settings.h`.
   without doing anything else. The display will blink for 0.5s approximately
   every 30s to prevent you from leaving the rig on by accident.
   This saves about 2.5mA (on 59mA total in RX mode).
+- `OPT_MORE_MEMORIES`: allows for up to ten message memories (0 through 9),
+  that can be selected using the rotary encoder instead of with the paddle.
+  Turning the encoder changes the index, pressing it selects that memory.
 
 ## How to flash the firmware
 
@@ -185,6 +188,10 @@ Some images of the connections:
 
 ## Changelog
 
+- 2017-04-21:
+	- Added up to 10 message memories (issue [#11](/../../issues/11))
+	- Allow for true QSK (issue [#12](/../../issues/12))
+	- Minor fixes
 - 2017-04-13:
 	- Made tuning steps an option in `settings.h`
 - 2017-04-12:

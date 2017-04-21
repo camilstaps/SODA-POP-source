@@ -101,11 +101,11 @@ unsigned int time_keyer()
       state.display.digits[0] = 0x00;
       state.display.dots = 0x4;
     } else if (duration > 50) {
-      state.display.digits[3] = LED_N_5;
-      state.display.digits[2] = LED_E;
-      state.display.digits[1] = LED_n;
-      state.display.digits[0] = LED_d;
-      state.display.dots = 0x0;
+      state.display.digits[3] = LED_S;
+      state.display.digits[2] = LED_n;
+      state.display.digits[1] = LED_d;
+      state.display.digits[0] = 0x00;
+      state.display.dots = 0x2;
     }
     delay(1); //for some reason a delay call has to be done when doing bit read flag tests or it locks up
     //this doesn't seem to be a problem when doing digital reads of a port pin instead.

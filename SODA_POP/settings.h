@@ -36,4 +36,7 @@
 #define OPT_DISABLE_DISPLAY
 #define DISABLE_DISPLAY_AFTER 2500 /* Time to disable display after, in ms */
 
+/* More message memories. Select using the rotary encoder. */
+#define OPT_MORE_MEMORIES
+
 // vim: tabstop=2 shiftwidth=2 expandtab:

@@ -3,13 +3,14 @@
 #ifndef _H_SODA_POP
 #define _H_SODA_POP
 
+#include "settings.h"
+
 #include "bands.h"
 #include "buttons.h"
 #include "display.h"
 #include "key.h"
 #include "memory.h"
 #include "morse.h"
-#include "settings.h"
 
 enum state : unsigned char {
   S_STARTUP,
@@ -69,6 +70,10 @@ const byte tuning_blinks[] = TUNING_STEP_DIGITS;
 byte dfe_character;
 byte dfe_position;
 unsigned int dfe_freq;
+#endif
+
+#ifdef OPT_MORE_MEMORIES
+byte memory_index;
 #endif
 
 #define EEPROM_IF_FREQ   0 // 4 bytes

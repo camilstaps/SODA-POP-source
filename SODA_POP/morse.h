@@ -45,6 +45,10 @@
 
 #define Mquestion 0b1001100 // ?
 
+#ifdef OPT_MORE_MEMORIES
+const byte MORSE_DIGITS[] = {M0,M1,M2,M3,M4,M5,M6,M7,M8,M9};
+#endif
+
 #endif
 
 // vim: tabstop=2 shiftwidth=2 expandtab:
