@@ -16,6 +16,10 @@
 /* Which digit to blink for each of these tuning steps */
 #define TUNING_STEP_DIGITS {BLINK_NONE, BLINK_0, BLINK_1, BLINK_2}
 
+/* Custom default operating frequencies, per band, in mHz.
+ * See bands.h for defaults */
+//#define DEFAULT_OP_FREQ_40  703000000
+
 /* Custom features. For more details, see README.md. */
 
 /* Band selection by pressing RIT for 2s */

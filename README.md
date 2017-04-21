@@ -189,26 +189,27 @@ Some images of the connections:
 ## Changelog
 
 - 2017-04-21:
-	- Added up to 10 message memories (issue [#11](/../../issues/11))
-	- Allow for true QSK (issue [#12](/../../issues/12))
-	- Minor fixes
+  - Added up to 10 message memories (issue [#11](/../../issues/11))
+  - Allow for true QSK (issue [#12](/../../issues/12))
+  - Allow for user-defined default frequencies (issue [#15](/../../issues/15))
+  - Minor fixes
 - 2017-04-13:
-	- Made tuning steps an option in `settings.h`
+  - Made tuning steps an option in `settings.h`
 - 2017-04-12:
-	- Added `OPT_DISABLE_DISPLAY` (issue [#5](/../../issues/5)) (saves ~2.5mA)
-	- More power saving by entering sleep mode at the end of `loop()` (~6mA)
-	- Added comments to clarify the code
+  - Added `OPT_DISABLE_DISPLAY` (issue [#5](/../../issues/5)) (saves ~2.5mA)
+  - More power saving by entering sleep mode at the end of `loop()` (~6mA)
+  - Added comments to clarify the code
 - 2017-04-11:
-	- Rewrote all code to a state machine
-	- Fixed a bug with entering memory
-	- Minor changes to the display
-	- Made several things settings (see `settings.h`)
-	- Big steps tuning (issue [#3](/../../issues/3))
-	- Direct frequency entry (issue [#2](/../../issues/2))
-	- Store CW speed in EEPROM (issue [#1](/../../issues/1))
+  - Rewrote all code to a state machine
+  - Fixed a bug with entering memory
+  - Minor changes to the display
+  - Made several things settings (see `settings.h`)
+  - Big steps tuning (issue [#3](/../../issues/3))
+  - Direct frequency entry (issue [#2](/../../issues/2))
+  - Store CW speed in EEPROM (issue [#1](/../../issues/1))
 - 2017-04-04:
-	- Added bands up to 10m and enabled run-time band switching
-	- Fixed rotary encoder issues
+  - Added bands up to 10m and enabled run-time band switching
+  - Fixed rotary encoder issues
 
 [cs]: https://camilstaps.nl
 [kd1jv]: http://kd1jv.qrpradio.com/
