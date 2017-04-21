@@ -190,7 +190,7 @@ void loop()
   }
 
 #ifdef OPT_DISABLE_DISPLAY
-  if (state.state != S_DEFAULT)
+  if (state.state != S_DEFAULT && state.state != S_KEYING)
     state.idle_for = -1;
 #endif
 

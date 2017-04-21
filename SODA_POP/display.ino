@@ -13,7 +13,7 @@ volatile byte digit_counter = 0;
 void display_isr()
 {
 #ifdef OPT_DISABLE_DISPLAY
-  if (state.state == S_DEFAULT
+  if ((state.state == S_DEFAULT || state.state == S_KEYING)
       && state.idle_for >= DISABLE_DISPLAY_AFTER
       && !state.inputs.port)
     return;
