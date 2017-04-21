@@ -719,10 +719,6 @@ byte morse_char;
 void key_handle_start()
 {
   morse_char = 0x01;
-  digitalWrite(MUTE, HIGH);
-
-  if (state.state == S_KEYING || state.state == S_MEM_SEND_TX)
-    enable_rx_tx(RX_OFF_TX_ON);
 }
 
 /**
@@ -732,9 +728,6 @@ void key_handle_start()
  */
 void key_handle_end()
 {
-  digitalWrite(MUTE, LOW);
-  enable_rx_tx(RX_ON_TX_OFF);
-
   if (state.state == S_KEYING) {
     state.state = S_DEFAULT;
   } else if (state.state == S_MEM_ENTER) {
@@ -760,11 +753,14 @@ void key_handle_end()
  */
 void key_handle_dash()
 {
+  digitalWrite(MUTE, HIGH);
   SIDETONE_ENABLE();
-  if (state.state == S_KEYING || state.state == S_MEM_SEND_TX)
+  if (state.state == S_KEYING || state.state == S_MEM_SEND_TX) {
+    enable_rx_tx(RX_OFF_TX_ON);
     digitalWrite(TXEN, HIGH);
-  else
+  } else {
     morse_char = (morse_char << 1) | 0x01;
+  }
 }
 
 /**
@@ -772,11 +768,14 @@ void key_handle_dash()
  */
 void key_handle_dot()
 {
+  digitalWrite(MUTE, HIGH);
   SIDETONE_ENABLE();
-  if (state.state == S_KEYING || state.state == S_MEM_SEND_TX)
+  if (state.state == S_KEYING || state.state == S_MEM_SEND_TX) {
+    enable_rx_tx(RX_OFF_TX_ON);
     digitalWrite(TXEN, HIGH);
-  else
+  } else {
     morse_char <<= 1;
+  }
 }
 
 /**
@@ -787,6 +786,8 @@ void key_handle_dashdot_end()
 {
   SIDETONE_DISABLE();
   digitalWrite(TXEN, LOW);
+  enable_rx_tx(RX_ON_TX_OFF);
+  digitalWrite(MUTE, LOW);
 }
 
 /**
