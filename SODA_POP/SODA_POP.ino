@@ -62,10 +62,10 @@ Si5351 si5351;
 #define SI5351_CLK_RX SI5351_CLK0
 #define SI5351_CLK_TX SI5351_CLK1
 
-#define RX_ON_TX_ON   0xff
-#define RX_ON_TX_OFF  0xfe
+#define RX_ON_TX_ON   0xfc
 #define RX_OFF_TX_ON  0xfd
-#define RX_OFF_TX_OFF 0xfc
+#define RX_ON_TX_OFF  0xfe
+#define RX_OFF_TX_OFF 0xff
 
 #define IF_DEFAULT 491480000
 
@@ -375,7 +375,7 @@ void loop_change_band()
     if (state.state == S_CALIBRATION_CHANGE_BAND) {
       state.state = S_CALIBRATION_PEAK_RX;
       invalidate_frequencies();
-      enable_rx_tx(RX_OFF_TX_OFF);
+      enable_rx_tx(RX_ON_TX_ON);
     } else {
       state.state = S_DEFAULT;
     }
