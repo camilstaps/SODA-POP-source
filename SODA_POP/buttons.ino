@@ -66,7 +66,6 @@ unsigned int time_rit()
       state.display.dots = 0x4;
     }
 #endif
-    delay(1);
   } while (state.inputs.rit);
   debounce_rit();
 
@@ -107,8 +106,6 @@ unsigned int time_keyer()
       state.display.digits[0] = 0x00;
       state.display.dots = 0x2;
     }
-    delay(1); //for some reason a delay call has to be done when doing bit read flag tests or it locks up
-    //this doesn't seem to be a problem when doing digital reads of a port pin instead.
   } while (state.inputs.keyer); // wait until the bit goes high.
   debounce_keyer();
 
@@ -137,7 +134,6 @@ unsigned int time_encoder_button()
       state.display.dots = 0x0;
     }
 #endif
-    delay(1);
   } while (state.inputs.encoder_button);
   debounce_encoder_button();
 

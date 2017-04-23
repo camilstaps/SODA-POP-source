@@ -79,9 +79,22 @@ const int DOTin = A1;
 unsigned long IFfreq;
 long cal_value = 15000;
 
+/**
+ * The Timer1 ISR. Keeps track of a global timer, tcount, and calls ISRs for
+ * all parts of the system.
+ * See also key_isr(), buttons_isr() and display_isr().
+ */
 ISR (TIMER1_COMPA_vect)
 {
-  TIMER1_SERVICE_ROUTINE();
+  ++tcount;
+#ifdef OPT_DISABLE_DISPLAY
+  if (state.state == S_DEFAULT)
+    state.idle_for++;
+#endif
+  key_isr();
+  disable_display();
+  buttons_isr();
+  display_isr();
 }
 
 /**
@@ -718,24 +731,6 @@ void loop_calibration_peak_rx()
     invalidate_display();
     debounce_keyer();
   }
-}
-
-/**
- * The Timer1 ISR. Keeps track of a global timer, tcount, and calls ISRs for
- * all parts of the system.
- * See also key_isr(), buttons_isr() and display_isr().
- */
-void TIMER1_SERVICE_ROUTINE()
-{
-  ++tcount;
-#ifdef OPT_DISABLE_DISPLAY
-  if (state.state == S_DEFAULT)
-    state.idle_for++;
-#endif
-  key_isr();
-  disable_display();
-  buttons_isr();
-  display_isr();
 }
 
 /**

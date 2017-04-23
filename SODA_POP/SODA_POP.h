@@ -48,13 +48,13 @@ struct soda_pop {
   unsigned char tuning_step:3;
 
   struct display display;
-  struct inputs inputs;
+  volatile struct inputs inputs;
 
   unsigned int idle_for;
 };
 
 static struct soda_pop state;
-static unsigned long tcount;
+static volatile unsigned long tcount;
 
 static char buffer[MEMORY_LENGTH];
 
