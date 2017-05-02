@@ -122,6 +122,11 @@ uploading the code to the chip.
 - `TUNING_STEP_DIGITS`: which digit to blink when in a tuning step. An array of
   the same length as `TUNING_STEPS`. Values should be taken from `BLINK_NONE`,
   `BLINK_0`, `_1`, `_2` and `_3` (`0` is the rightmost digit).
+- There are several band plans. Define one of `PLAN_IARU1`, `_IARU2`, `_IARU3`.
+  The exact boundary definitions are in `bands.h`.
+- Change the default operating frequency of a band by defining e.g.
+
+      #define DEFAULT_OP_FREQ_20 1405500000
 
 ## Optional features
 There are several features that can be added to the rig if you want to. This is
@@ -193,10 +198,12 @@ Some images of the connections:
 ## Changelog
 
 - 2017-05-02:
-  - Power saving mode: the last dot now blinks when the display is off.
-  - The old IF frequency is used in the calibration routine.
+  - Power saving mode: the last dot now blinks when the display is off (issue
+    [#18](/../../issues/18))
+  - The old IF frequency is used in the calibration routine
+  - Added band plans for IARU-1,2,3 (issue [#13](/../../issues/13))
 - 2017-04-23 and -25:
-  - Fix timing issues when building with new versions of the Arduino IDE.
+  - Fix timing issues when building with new versions of the Arduino IDE
 - 2017-04-21:
   - Added up to 10 message memories (issue [#11](/../../issues/11))
   - Allow for true QSK (issue [#12](/../../issues/12))
