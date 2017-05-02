@@ -192,6 +192,11 @@ Some images of the connections:
 
 ## Changelog
 
+- 2017-05-02:
+  - Power saving mode: the last dot now stays on when the display is off.
+  - The old IF frequency is used in the calibration routine.
+- 2017-04-23 and -25:
+  - Fix timing issues when building with new versions of the Arduino IDE.
 - 2017-04-21:
   - Added up to 10 message memories (issue [#11](/../../issues/11))
   - Allow for true QSK (issue [#12](/../../issues/12))
