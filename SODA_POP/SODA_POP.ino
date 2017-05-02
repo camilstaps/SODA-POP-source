@@ -673,7 +673,7 @@ void loop_calibration_correction()
     EEPROM.write(EEPROM_CAL_VALUE + 1, cal_value >> 8);
 
     state.state = S_CALIBRATION_PEAK_IF;
-    state.op_freq = IF_DEFAULT;
+    state.op_freq = IFfreq == 0xfffffffful ? IF_DEFAULT : IFfreq;
     invalidate_frequencies();
     invalidate_display();
     enable_rx_tx(RX_ON_TX_OFF);
