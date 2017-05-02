@@ -193,7 +193,7 @@ Some images of the connections:
 ## Changelog
 
 - 2017-05-02:
-  - Power saving mode: the last dot now stays on when the display is off.
+  - Power saving mode: the last dot now blinks when the display is off.
   - The old IF frequency is used in the calibration routine.
 - 2017-04-23 and -25:
   - Fix timing issues when building with new versions of the Arduino IDE.

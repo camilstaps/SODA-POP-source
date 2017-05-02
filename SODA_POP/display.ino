@@ -16,8 +16,8 @@ void display_isr()
   if ((state.state == S_DEFAULT || state.state == S_KEYING)
       && state.idle_for >= DISABLE_DISPLAY_AFTER
       && !state.inputs.port) {
-    digit_counter = (digit_counter + 1) & 0x07;
-    if (digit_counter == 0x00) {
+    digit_counter++;
+    if (!(digit_counter & 0x07) && (digit_counter & 0x80)) {
       PORTD = 0x04;
       digitalWrite(SLED1, LOW);
     }
