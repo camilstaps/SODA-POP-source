@@ -5,6 +5,10 @@
 volatile byte digit_counter = 0;
 #define BLINKED_ON ((((byte) tcount) >> 7) & 0x01)
 
+#ifdef OPT_DISABLE_DISPLAY
+byte idle_dot_counter = 0;
+#endif
+
 /**
  * The ISR for the display. Should be called regularly (ideally from a timer
  * ISR). Multiplexes the display: every time the function is called, one digit
@@ -17,7 +21,9 @@ void display_isr()
       && state.idle_for >= DISABLE_DISPLAY_AFTER
       && !state.inputs.port) {
     digit_counter++;
-    if (!(digit_counter & 0x07) && (digit_counter & 0x80)) {
+    if (!digit_counter)
+      idle_dot_counter++;
+    if (!(idle_dot_counter & 0x0e)) {
       PORTD = 0x04;
       digitalWrite(SLED1, LOW);
     }
