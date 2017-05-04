@@ -26,6 +26,7 @@
 #define LED_P   0xf1
 #define LED_S   LED_N_5
 #define LED_X   0x79
+#define LED_b   LED_N_6
 #define LED_c   0x32
 #define LED_d   0x3b
 #define LED_n   0x38

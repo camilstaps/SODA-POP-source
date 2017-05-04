@@ -15,16 +15,29 @@ void store_memory(byte nr)
 }
 
 /**
- * Transmit a message memory from EEPROM.
+ * Load a message memory from EEPROM into the RAM buffer.
  *
- * @param nr the index of the message to send.
+ * @param nr the index of the message to load.
  */
-void transmit_memory(byte nr)
+void load_memory(byte nr)
 {
   int addr = MEMORY_EEPROM_START + nr * MEMORY_LENGTH;
   for (byte i = 0; i < MEMORY_LENGTH; i++)
     buffer[i] = EEPROM.read(addr++);
-  playback_buffer();
+}
+
+/**
+ * Prepare the buffer to transmit. This replaces all 0x00 (space) and 0xff
+ * (empty) from the end of the buffer with 0xff, s.t. the first 0xff that is
+ * encountered from the start of the buffer marks the end of the message.
+ */
+void prepare_buffer_for_tx()
+{
+  for (byte i = MEMORY_LENGTH - 1; i; i--) {
+    if (buffer[i] != 0x00 && buffer[i] != 0xff)
+      return;
+    buffer[i] = 0xff;
+  }
 }
 
 /**
@@ -34,12 +47,7 @@ void transmit_memory(byte nr)
  */
 void playback_buffer()
 {
-  for (byte i = MEMORY_LENGTH - 1; i; i--) {
-    if (buffer[i] == 0x00 || buffer[i] == 0xff)
-      buffer[i] = 0xff;
-    else
-      break;
-  }
+  prepare_buffer_for_tx();
 
   key_handle_start();
   for (byte i = 0; i < MEMORY_LENGTH; i++) {

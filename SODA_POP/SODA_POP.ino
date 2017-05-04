@@ -187,7 +187,7 @@ void loop()
     case S_MEM_ENTER:               loop_mem_enter(); break;
     case S_MEM_ENTER_REVIEW:        loop_mem_enter_review(); break;
     case S_MEM_SEND_WAIT:           loop_mem_send_wait(); break;
-    case S_MEM_SEND_TX:             break;
+    case S_MEM_SEND_TX:             loop_mem_send_tx(); break;
     case S_CALIBRATION_CORRECTION:  loop_calibration_correction(); break;
     case S_CALIBRATION_PEAK_IF:     loop_calibration_peak_if(); break;
     case S_CALIBRATION_CHANGE_BAND: loop_change_band(); break;
@@ -619,9 +619,7 @@ void loop_mem_send_wait()
   } else if (state.inputs.keyer) {
     debounce_keyer();
     state.state = S_MEM_SEND_TX;
-    transmit_memory(memory_index);
-    state.state = S_DEFAULT;
-    memory_index = 0;
+    load_memory_for_tx(memory_index);
     invalidate_display();
   } else if (key_active()) {
     iambic_key();
@@ -657,9 +655,7 @@ void loop_mem_send_wait()
     if (memory_index_character != 0xff) {
       invalidate_display();
       state.state = S_MEM_SEND_TX;
-      transmit_memory(memory_index);
-      state.state = S_DEFAULT;
-      memory_index = 0;
+      load_memory_for_tx(memory_index);
       invalidate_display();
       memory_index_character = 0xff;
     }
@@ -673,7 +669,7 @@ void loop_mem_send_wait()
     invalidate_display();
   } else if (!digitalRead(DOTin)) {
     state.state = S_MEM_SEND_TX;
-    transmit_memory(1);
+    load_memory_for_tx(1);
     state.state = S_DEFAULT;
     invalidate_display();
   }
@@ -682,6 +678,62 @@ void loop_mem_send_wait()
     state.state = S_DEFAULT;
     invalidate_display();
     debounce_rit();
+  }
+}
+
+/**
+ * Loop for the S_MEM_SEND_TX state. In this state, on every iteration, the
+ * next character of the buffer is transmitted.
+ * At the end, we return to S_DEFAULT, unless we are in beacon mode. In beacon
+ * mode, we wait for a time defined by BEACON_INTERVAL, and then repeat.
+ * The keyer switch toggles beacon mode on and off. The RIT switch ends any
+ * active transmission.
+ */
+void loop_mem_send_tx()
+{
+  if (state.inputs.keyer) {
+    state.beacon = ~state.beacon;
+    invalidate_display();
+    debounce_keyer();
+  } else if (state.inputs.rit) {
+    state.state = S_DEFAULT;
+    invalidate_display();
+    debounce_rit();
+  } else {
+    byte character = buffer[state.mem_tx_index];
+    switch (character) {
+      case 0xff:
+        state.mem_tx_index = 0;
+        if (!state.beacon) {
+          memory_index = 0;
+          state.state = S_DEFAULT;
+          invalidate_display();
+        } else {
+          for (byte i = 0; i < BEACON_INTERVAL; i++) {
+            delay(state.key.dot_time);
+            if (state.inputs.keyer || state.inputs.rit) {
+              if (state.inputs.keyer)
+                state.beacon = 0;
+              memory_index = 0;
+              state.state = S_DEFAULT;
+              invalidate_display();
+              debounce_keyer();
+              debounce_rit();
+            }
+          }
+        }
+        break;
+      case 0x00:
+        delay(7 * state.key.dot_time);
+        state.mem_tx_index++;
+        break;
+      default:
+        key_handle_start();
+        morse(character);
+        key_handle_end();
+        state.mem_tx_index++;
+        break;
+    }
   }
 }
 
@@ -996,6 +1048,17 @@ void invalidate_frequencies()
 
   si5351.set_freq(freq, 0ull, SI5351_CLK_RX);
   si5351.set_freq(TX_FREQ(state), 0ull, SI5351_CLK_TX);
+}
+
+/**
+ * Prepare a memory for transmission. This loads the memory, prepares the
+ * buffer and resets the character index.
+ */
+void load_memory_for_tx(byte index)
+{
+  load_memory(index);
+  prepare_buffer_for_tx();
+  state.mem_tx_index = 0;
 }
 
 #ifdef OPT_STORE_CW_SPEED

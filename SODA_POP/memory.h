@@ -7,7 +7,8 @@
 
 void store_memory(byte);
 void transmit_memory(byte);
-void playback_buffer(void);
+void playback_buffer();
+void prepare_buffer_for_tx();
 void empty_buffer(void);
 
 #endif

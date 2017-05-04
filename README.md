@@ -52,6 +52,13 @@ Pressing the keyer switch allows you to send a message from memory. There are
 two messages, use either side of the paddle to send one. Use the RIT switch
 to cancel.
 
+When a message is being transmitted, you can still use the RIT switch to cancel
+it. You can also enter beacon mode by pressing the keyer switch. In beacon
+mode, the message is repeated continuously with an adjustable delay in between
+(see `BEACON_INTERVAL` under [Settings](#settings)). During transmission, the
+keys are only checked *between* the transmitted characters, so you'll have to
+hold the buttons longer than normally.
+
 To update the memory, hold the keyer switch for 5s. The display will say
 `Entr.`. Enter the message using the paddle. This is not possible with a
 straight key. The display will flash once after a character space is detected,
@@ -117,6 +124,9 @@ uploading the code to the chip.
   spaces (64). Higher values than 255 are unsupported.
 - `MEMORY_EEPROM_START`: the start address of the memory in EEPROM (16). Don't
   change this unless you know what you're doing.
+- `BEACON_INTERVAL`: the number of dot times between two transmissions of a
+  message in beacon mode. A dot time is 1.2s / WPM (e.g. a beacon interval of
+  15 means 1.5s on 10WPM).
 - `TUNING_STEPS`: an array of tuning steps in mHz. These steps are rotated
   through with the encoder button.
 - `TUNING_STEP_DIGITS`: which digit to blink when in a tuning step. An array of
@@ -199,6 +209,7 @@ Some images of the connections:
 ## Changelog
 
 - 2017-05-04:
+  - Beacon mode (issue [#6](/../../issues/6))
   - More logical UX for sending and storing memories, using RIT to cancel
   - More memories can be selected by entering a number with the paddle (issue
     [#16](/../../issues/16))

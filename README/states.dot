@@ -37,9 +37,10 @@ digraph {
 	default -> mem_send_wait [label="Keyer", constraint=false];
 	mem_send_wait -> default [label="RIT"];
 	mem_send_wait:n -> mem_send_wait:n [label="Up/down", style="dashed"]
-	mem_send_wait -> mem_send_tx [label="Paddle"];
+	mem_send_wait -> mem_send_tx [label="Paddle", constraint=false];
 	mem_send_wait -> mem_send_tx [label="Keyer", style="dashed"];
-	mem_send_tx -> default;
+	mem_send_tx -> mem_send_tx [label="Keyer"];
+	mem_send_tx -> default [label="RIT/timeout"];
 
 	default -> mem_enter_wait [label="Keyer (5s)", constraint=false];
 	mem_enter_wait -> default [label="RIT"];

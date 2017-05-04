@@ -101,9 +101,15 @@ unsigned int time_keyer()
       state.display.digits[0] = 0x00;
       state.display.dots = 0x4;
     } else if (duration > 50) {
-      state.display.digits[3] = LED_S;
-      state.display.digits[2] = LED_n;
-      state.display.digits[1] = LED_d;
+      if (state.beacon) {
+        state.display.digits[3] = LED_b;
+        state.display.digits[2] = LED_c;
+        state.display.digits[1] = LED_n;
+      } else {
+        state.display.digits[3] = LED_S;
+        state.display.digits[2] = LED_n;
+        state.display.digits[1] = LED_d;
+      }
       state.display.digits[0] = 0x00;
       state.display.dots = 0x2;
     }

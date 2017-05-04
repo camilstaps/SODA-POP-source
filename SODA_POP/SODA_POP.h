@@ -47,6 +47,9 @@ struct soda_pop {
   unsigned char rit:1;
   unsigned char tuning_step:3;
 
+  unsigned char beacon:1;
+  unsigned char mem_tx_index;
+
   struct display display;
   volatile struct inputs inputs;
 

@@ -125,9 +125,15 @@ void invalidate_display()
       break;
     case S_MEM_SEND_WAIT:
     case S_MEM_SEND_TX:
-      state.display.digits[3] = LED_S;
-      state.display.digits[2] = LED_n;
-      state.display.digits[1] = LED_d;
+      if (state.beacon) {
+        state.display.digits[3] = LED_b;
+        state.display.digits[2] = LED_c;
+        state.display.digits[1] = LED_n;
+      } else {
+        state.display.digits[3] = LED_S;
+        state.display.digits[2] = LED_n;
+        state.display.digits[1] = LED_d;
+      }
 #ifdef OPT_MORE_MEMORIES
       state.display.digits[0] = LED_DIGITS[memory_index];
 #else
