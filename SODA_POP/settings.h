@@ -43,8 +43,6 @@
 
 /* Direct frequency entry by holding encoder for 2s */
 #define OPT_DFE
-/* Obscure CW number abbrevations in DFE mode */
-//#define OPT_DFE_OBSCURE_ABBREVIATIONS
 
 /* Disable display when idle */
 #define OPT_DISABLE_DISPLAY
@@ -52,5 +50,8 @@
 
 /* More message memories. Select using the rotary encoder. */
 #define OPT_MORE_MEMORIES
+
+/* Obscure CW number abbrevations in DFE and more memories mode */
+//#define OPT_OBSCURE_MORSE_ABBREVIATIONS
 
 // vim: tabstop=2 shiftwidth=2 expandtab:

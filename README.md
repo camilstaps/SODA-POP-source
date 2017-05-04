@@ -200,6 +200,9 @@ Some images of the connections:
 
 - 2017-05-04:
   - More logical UX for sending and storing memories, using RIT to cancel
+  - More memories can be selected by entering a number with the paddle (issue
+    [#16](/../../issues/16))
+  - `OPT_DFE_OBSCURE_ABBREVIATIONS` is now `OPT_OBSCURE_MORSE_ABBREVIATIONS`
 - 2017-05-02:
   - Power saving mode: the last dot now blinks when the display is off (issue
     [#18](/../../issues/18))

@@ -74,6 +74,7 @@ unsigned int dfe_freq;
 
 #ifdef OPT_MORE_MEMORIES
 byte memory_index;
+byte memory_index_character;
 #endif
 
 #define EEPROM_IF_FREQ   0 // 4 bytes

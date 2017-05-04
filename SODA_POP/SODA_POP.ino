@@ -285,6 +285,9 @@ void loop_default()
       invalidate_display();
     } else if (duration > 50) {
       state.state = S_MEM_SEND_WAIT;
+#ifdef OPT_MORE_MEMORIES
+      memory_index_character = 0xff;
+#endif
       invalidate_display();
     }
   // RIT switch for RIT, changing band, calibration and erasing EEPROM
@@ -411,7 +414,7 @@ void loop_dfe()
     unsigned int add;
     switch (dfe_character) {
       case M0: case MT: add = 0; break;
-#ifdef OPT_DFE_OBSCURE_ABBREVIATIONS
+#ifdef OPT_OBSCURE_MORSE_ABBREVIATIONS
       case M1: case MA: add = 1; break;
       case M2: case MU: add = 2; break;
       case M3: case MW: add = 3; break;
@@ -620,6 +623,46 @@ void loop_mem_send_wait()
     state.state = S_DEFAULT;
     memory_index = 0;
     invalidate_display();
+  } else if (key_active()) {
+    iambic_key();
+  } else if (memory_index_character != 0xff) {
+    switch (memory_index_character) {
+      case M0: case MT: memory_index = 0; break;
+#ifdef OPT_OBSCURE_MORSE_ABBREVIATIONS
+      case M1: case MA: memory_index = 1; break;
+      case M2: case MU: memory_index = 2; break;
+      case M3: case MW: memory_index = 3; break;
+      case M4: case MV: memory_index = 4; break;
+      case M5: case MS: memory_index = 5; break;
+      case M6: case MB: memory_index = 6; break;
+      case M7: case MG: memory_index = 7; break;
+      case M8: case MD: memory_index = 8; break;
+#else
+      case M1: memory_index = 1; break;
+      case M2: memory_index = 2; break;
+      case M3: memory_index = 3; break;
+      case M4: memory_index = 4; break;
+      case M5: memory_index = 5; break;
+      case M6: memory_index = 6; break;
+      case M7: memory_index = 7; break;
+      case M8: memory_index = 8; break;
+#endif
+      case M9: case MN: memory_index = 9; break;
+      default:
+        morse(Mquestion);
+        memory_index_character = 0xff;
+        break;
+    }
+
+    if (memory_index_character != 0xff) {
+      invalidate_display();
+      state.state = S_MEM_SEND_TX;
+      transmit_memory(memory_index);
+      state.state = S_DEFAULT;
+      memory_index = 0;
+      invalidate_display();
+      memory_index_character = 0xff;
+    }
   }
 #else
   // Paddle chooses a memory
@@ -780,6 +823,11 @@ void key_handle_end()
 #ifdef OPT_DFE
   else if (state.state == S_DFE) {
     dfe_character = morse_char;
+  }
+#endif
+#ifdef OPT_MORE_MEMORIES
+  else if (state.state == S_MEM_SEND_WAIT) {
+    memory_index_character = morse_char;
   }
 #endif
 }
