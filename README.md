@@ -49,7 +49,7 @@ Pressing the RIT button turns RIT on. The display will show the RIT offset.
 
 ### Message memory
 Pressing the keyer switch allows you to send a message from memory. There are
-two messages, use either side of the paddle to send one. Use the keyer switch
+two messages, use either side of the paddle to send one. Use the RIT switch
 to cancel.
 
 To update the memory, hold the keyer switch for 5s. The display will say
@@ -58,8 +58,8 @@ straight key. The display will flash once after a character space is detected,
 and once again after a word space has been detected. To finish, press the keyer
 switch again. The message will be played back while the display reads `St.?`
 (from 'store'). After this, store the message with either side of the paddle.
-Pressing the keyer switch allows you to key in a message again; pressing the
-keyer switch once more returns to the default state.
+Pressing the RIT switch allows you to key in a message again; pressing the RIT
+switch once more returns to the default state.
 
 The maximum message length is 64 by default (can be changed in `settings.h`).
 If you try to enter more characters, the error routine is enabled (see below).
@@ -157,7 +157,8 @@ done by adding and removing `#define` lines to `settings.h`.
   This saves about 2.5mA (on 59mA total in RX mode).
 - `OPT_MORE_MEMORIES`: allows for up to ten message memories (0 through 9),
   that can be selected using the rotary encoder instead of with the paddle.
-  Turning the encoder changes the index, pressing it selects that memory.
+  Turning the encoder changes the index, pressing the keyer switch selects that
+  memory.
 
 ## How to flash the firmware
 
@@ -197,6 +198,8 @@ Some images of the connections:
 
 ## Changelog
 
+- 2017-05-04:
+  - More logical UX for sending and storing memories, using RIT to cancel
 - 2017-05-02:
   - Power saving mode: the last dot now blinks when the display is off (issue
     [#18](/../../issues/18))

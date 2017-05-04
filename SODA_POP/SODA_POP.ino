@@ -490,7 +490,7 @@ void loop_mem_enter_wait()
 {
   memory_pointer = 0;
 
-  if (state.inputs.keyer || state.key.mode != KEY_IAMBIC) {
+  if (state.inputs.rit || state.key.mode != KEY_IAMBIC) {
     state.state = S_DEFAULT;
     invalidate_display();
     morse(MX);
@@ -536,12 +536,11 @@ void loop_mem_enter()
 /**
  * Loop for the S_MEM_ENTER_REVIEW state. In this state, the user has just
  * heard the memory as he entered it.
- * The keyer switch returns to the S_MEM_ENTER_WAIT state, discarding the
- * entry. To return to the S_DEFAULT, press keyer again.
+ * The RIT switch returns to the S_MEM_ENTER_WAIT state, discarding the entry.
  * Normally, either side of the paddle stores the message in memory (depending
  * on the side of the paddle that was pressed).
  * With OPT_MORE_MEMORIES enabled, one of ten memories can be selected using
- * the rotary encoder: turn to select, then save with the encoder button.
+ * the rotary encoder: turn to select, then save with the keyer switch.
  */
 void loop_mem_enter_review()
 {
@@ -555,14 +554,14 @@ void loop_mem_enter_review()
     if (memory_index == 0xff)
       memory_index = 9;
     invalidate_display();
-  } else if (state.inputs.encoder_button) {
+  } else if (state.inputs.keyer) {
     store_memory(memory_index);
     morse(MM);
     morse(MORSE_DIGITS[memory_index]);
     memory_index = 0;
     state.state = S_DEFAULT;
     invalidate_display();
-    debounce_encoder_button();
+    debounce_keyer();
   }
 #else
   if (digitalRead(DASHin) == LOW) {
@@ -583,24 +582,24 @@ void loop_mem_enter_review()
       delay(50);
   }
 #endif
-  else if (state.inputs.keyer) {
+  else if (state.inputs.rit) {
     state.state = S_MEM_ENTER_WAIT;
     memory_pointer = 0;
     invalidate_display();
-    debounce_keyer();
+    debounce_rit();
   }
 }
 
 /**
  * Loop for the S_MEM_SEND_WAIT state. In this state, the user can choose the
  * memory to send. Picking a memory moves to the S_MEM_SEND_TX state, transmits
- * the memory and returns to S_DEFAULT.  The keyer switch returns to the
+ * the memory and returns to S_DEFAULT.  The RIT switch returns to the
  * S_DEFAULT state.
  * Normally, one of two messages can be selected using either side of the
  * paddle. When using a straight key, the device picks the dot-memory
  * automatically.
  * With OPT_MORE_MEMORIES enabled, one of ten memories can be selected using
- * the rotary encoder: turn to select, then transmit with the encoder button.
+ * the rotary encoder: turn to select, then transmit with the keyer switch.
  */
 void loop_mem_send_wait()
 {
@@ -614,8 +613,8 @@ void loop_mem_send_wait()
     if (memory_index == 0xff)
       memory_index = 9;
     invalidate_display();
-  } else if (state.inputs.encoder_button) {
-    debounce_encoder_button();
+  } else if (state.inputs.keyer) {
+    debounce_keyer();
     state.state = S_MEM_SEND_TX;
     transmit_memory(memory_index);
     state.state = S_DEFAULT;
@@ -636,11 +635,10 @@ void loop_mem_send_wait()
     invalidate_display();
   }
 #endif
-  // Keyer exits
-  else if (state.inputs.keyer) {
+  else if (state.inputs.rit) {
     state.state = S_DEFAULT;
     invalidate_display();
-    debounce_keyer();
+    debounce_rit();
   }
 }
 

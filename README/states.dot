@@ -35,20 +35,20 @@ digraph {
 	dfe -> default [label="RIT/Keyer", style="dashed"];
 
 	default -> mem_send_wait [label="Keyer", constraint=false];
-	mem_send_wait -> default [label="Keyer"];
+	mem_send_wait -> default [label="RIT"];
 	mem_send_wait:n -> mem_send_wait:n [label="Up/down", style="dashed"]
 	mem_send_wait -> mem_send_tx [label="Paddle"];
-	mem_send_wait -> mem_send_tx [label="Encoder", style="dashed"];
+	mem_send_wait -> mem_send_tx [label="Keyer", style="dashed"];
 	mem_send_tx -> default;
 
 	default -> mem_enter_wait [label="Keyer (5s)", constraint=false];
-	mem_enter_wait -> default [label="Keyer"];
+	mem_enter_wait -> default [label="RIT"];
 	mem_enter_wait -> mem_enter [label="Paddle"];
 	mem_enter -> mem_enter_review [label="Keyer"];
-	mem_enter_review -> mem_enter_wait [label="Keyer"];
+	mem_enter_review -> mem_enter_wait [label="RIT"];
 	mem_enter_review:e -> mem_enter_review:e [label="Up/down", style="dashed"];
 	mem_enter_review -> default [label="Paddle"];
-	mem_enter_review -> default [label="Encoder", style="dashed"];
+	mem_enter_review -> default [label="Keyer", style="dashed"];
 
 	default -> cal_correction [label="RIT (5s)"];
 	cal_correction:e -> cal_correction:e [label="Up/down"];
