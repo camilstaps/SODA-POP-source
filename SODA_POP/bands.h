@@ -234,10 +234,10 @@ enum band : unsigned char {
 const unsigned char BAND_DIGITS_2[] = {1,8,4,3,2,1,1,1,1};
 const unsigned char BAND_DIGITS_1[] = {6,0,0,0,0,7,5,2,0};
 # ifndef DEFAULT_OP_FREQ_160
-# define DEFAULT_OP_FREQ_160 181500000
+# define DEFAULT_OP_FREQ_160 183200000
 # endif
 # ifndef DEFAULT_OP_FREQ_80
-# define DEFAULT_OP_FREQ_80  353000000
+# define DEFAULT_OP_FREQ_80  353200000
 # endif
 # ifndef DEFAULT_OP_FREQ_40
 # define DEFAULT_OP_FREQ_40  703200000
@@ -255,10 +255,10 @@ const unsigned char BAND_DIGITS_1[] = {6,0,0,0,0,7,5,2,0};
 # define DEFAULT_OP_FREQ_15 2106200000u
 # endif
 # ifndef DEFAULT_OP_FREQ_12
-# define DEFAULT_OP_FREQ_12 2490600000u
+# define DEFAULT_OP_FREQ_12 2490800000u
 # endif
 # ifndef DEFAULT_OP_FREQ_10
-# define DEFAULT_OP_FREQ_10 2806000000u
+# define DEFAULT_OP_FREQ_10 2806200000u
 # endif
 const unsigned long BAND_LIMITS_LOW[] =
   {  180000000
