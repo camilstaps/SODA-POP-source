@@ -22,6 +22,7 @@
  * - PLAN_IARU1
  * - PLAN_IARU2
  * - PLAN_IARU3
+ * - PLAN_VK
  * It is possible to override the default operating frequency using:
  * #define DEFAULT_OP_FREQ_20 1405500000
  * ... setting the default frequency to 14.055 MHz on 20m.

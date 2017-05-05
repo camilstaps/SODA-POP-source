@@ -1011,6 +1011,18 @@ void freq_adjust(long step)
  */
 void fix_op_freq()
 {
+#ifdef PLAN_VK
+  if (state.band == BAND_80) {
+    if (state.op_freq > BAND_80_LOW_TOP && state.op_freq < BAND_80_GAP_MIDDLE){	
+	  state.op_freq = BAND_80_HIGH_BOTTOM;
+	  return;
+	}
+    else if (state.op_freq < BAND_80_HIGH_BOTTOM && state.op_freq > BAND_80_GAP_MIDDLE) {	  
+	  state.op_freq = BAND_80_LOW_TOP;
+	  return;
+	}
+  }
+#endif
   if (state.op_freq > BAND_LIMITS_HIGH[state.band])
     state.op_freq = BAND_LIMITS_HIGH[state.band];
   if (state.op_freq < BAND_LIMITS_LOW[state.band])
