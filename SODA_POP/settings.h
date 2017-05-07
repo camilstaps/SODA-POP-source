@@ -37,6 +37,9 @@
 /* Band selection by pressing RIT for 2s */
 #define OPT_BAND_SELECT
 
+/* Autoband selection based on plugged in module - enabled by PCA9536 PIO on board module */
+#define AUTO_BAND
+
 /* Erase EEPROM by pressing RIT for 8s */
 #define OPT_ERASE_EEPROM
 
