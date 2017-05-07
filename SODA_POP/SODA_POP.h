@@ -92,6 +92,9 @@ byte memory_index_character;
 #undef OPT_BAND_SELECT
 #endif
 
+#define TRUE   1
+#define FALSE  0
+
 #endif
 
 // vim: tabstop=2 shiftwidth=2 expandtab:

@@ -246,7 +246,7 @@ void loop_default()
 #endif
 
 #ifdef AUTO_BAND
-  if (tcount mod 5000 == 1) read_module_band();   // Check the band module for changes every 5s
+  if (tcount % 5000 == 1) read_module_band();   // Check the band module for changes every 5s
 #endif
 
   if (key_active()) {
@@ -1128,24 +1128,22 @@ byte PCA9536_read()
 	  Wire.write(0);                           // We read only from register 0, the input latch
 	  Wire.endTransmission();
 	  Wire.requestFrom(PCA9536_BUS_ADDR, 1);
-	  if (Wire.available() != 1)	{  		// Unable to read the band module ID (most 
-                                      // likely it's not plugged in properly, or being changed!)
-      digit4 = LED_N_6;
-      digit3 = LED_n;
-	    digit2 = LED_E;
-		  digit1 = LED_r;
+    err = FALSE;
+	  if (Wire.available() != 1)  		// Unable to read the band module ID (most 
+                                    // likely it's not plugged in properly, or being changed!)
 		  err = TRUE;
-		  delay(500);
-	  } else {
+	  else {
   	  reg_val = Wire.read() & 0x0f;
-	    if( reg_val < 2 || reg_val > 11) {	  // Module has an un-supported configuration
-        digit4 = LED_N_6;
-        digit3 = LED_n;
-	      digit2 = LED_E;
-		    digit1 = LED_r;
-		    err = TRUE;
-		    delay(500);
-	    } else err = FALSE;
+	    if( reg_val < 2 || reg_val > 11)	  // Module has an un-supported configuration
+        err = TRUE;
+	  }
+    if (err) {
+      state.display.digits[3] = LED_N_6;
+      state.display.digits[2] = LED_n;
+      state.display.digits[1] = LED_E;
+      state.display.digits[0] = LED_r;
+      state.display.dots = 0x0;
+      delay(500);
 	  }
 	}
  	return reg_val;
@@ -1178,12 +1176,11 @@ void read_module_band()
      if (new_band != state.band) {
 		   digitalWrite(MUTE, LOW);	 // Make sure we are in receieve mode
 		   state.band = new_band;
-       digit4 = LED_N_6;
-       digit3 = LED_n;
        setup_band();             // Set the band limits and default 
                                  // operating frequency for the selected band
-		   invalidate_display();
+       display_band();
        delay(2000);              // Allow time to view the band on the display
+       invalidate_display();
      }
 }
 

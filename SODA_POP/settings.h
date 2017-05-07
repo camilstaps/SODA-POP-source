@@ -26,7 +26,7 @@
  * #define DEFAULT_OP_FREQ_20 1405500000
  * ... setting the default frequency to 14.055 MHz on 20m.
  */
-#define PLAN_IARU2
+#define PLAN_IARU3
 
 /* Custom default operating frequencies, per band, in mHz.
  * See bands.h for defaults */
@@ -50,7 +50,7 @@
 #define OPT_DFE
 
 /* Disable display when idle */
-#define OPT_DISABLE_DISPLAY
+//#define OPT_DISABLE_DISPLAY
 #define DISABLE_DISPLAY_AFTER 2500 /* Time to disable display after, in ms */
 
 /* More message memories. Select using the rotary encoder. */
