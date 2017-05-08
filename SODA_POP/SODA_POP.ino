@@ -1126,9 +1126,10 @@ byte PCA9536_read()
 	while (!err) {
 	  Wire.beginTransmission(PCA9536_BUS_ADDR);
 	  Wire.write(0);                           // We read only from register 0, the input latch
-	  Wire.endTransmission();
+	  err = Wire.endTransmission();
+	  if (err) error(err);			 // if transmit failed, stop for debugging
 	  Wire.requestFrom(PCA9536_BUS_ADDR, 1);
-    err = FALSE;
+          err = FALSE;
 	  if (Wire.available() != 1)  		// Unable to read the band module ID (most 
                                     // likely it's not plugged in properly, or being changed!)
 		  err = TRUE;
