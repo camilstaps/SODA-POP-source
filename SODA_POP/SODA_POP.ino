@@ -1126,7 +1126,7 @@ byte PCA9536_read()
 	while (!err) {
 	  Wire.beginTransmission(PCA9536_BUS_ADDR);
 	  Wire.write(0);                           // We read only from register 0, the input latch
-	  err = Wire.endTransmission();
+	  err = Wire.endTransmission(false);	  // Transmit repeated start rather than stop at end of transmission
 	  if (err) error(err);			 // if transmit failed, stop for debugging
 	  Wire.requestFrom(PCA9536_BUS_ADDR, 1);
           err = FALSE;
