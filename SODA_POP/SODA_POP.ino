@@ -1121,15 +1121,14 @@ void error(int er)
 byte PCA9536_read()
 {
   byte reg_val;
-	byte err = FALSE;			// Flag for error reading band value
+	byte err = TRUE;			// Flag for error reading band value
 	 
-	while (!err) {
+	while (err) {
 	  Wire.beginTransmission(PCA9536_BUS_ADDR);
-	  Wire.write(0);                           // We read only from register 0, the input latch
-	  err = Wire.endTransmission(false);	  // Transmit repeated start rather than stop at end of transmission
-	  if (err) error(err);			 // if transmit failed, stop for debugging
+	  Wire.write(byte(0x00));                 // We read only from register 0, the input latch
+	  Wire.endTransmission(false);	  // Transmit repeated start rather than stop at end of transmission
 	  Wire.requestFrom(PCA9536_BUS_ADDR, 1);
-          err = FALSE;
+    err = FALSE;
 	  if (Wire.available() != 1)  		// Unable to read the band module ID (most 
                                     // likely it's not plugged in properly, or being changed!)
 		  err = TRUE;
@@ -1147,6 +1146,7 @@ byte PCA9536_read()
       delay(500);
 	  }
 	}
+  invalidate_display();
  	return reg_val;
 }
 
