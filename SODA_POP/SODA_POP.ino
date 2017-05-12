@@ -969,26 +969,13 @@ void calibration_set_correction()
  */
 void fetch_calibration_data()
 {
-  unsigned long temp = 0;
+  IFfreq = EEPROM.read(3);
+  IFfreq = (IFfreq << 8) + EEPROM.read(2);
+  IFfreq = (IFfreq << 8) + EEPROM.read(1);
+  IFfreq = (IFfreq << 8) + EEPROM.read(0);
 
-  temp = EEPROM.read(3);
-  IFfreq = IFfreq+temp;
-  IFfreq = IFfreq << 8;
-  temp = EEPROM.read(2);
-  IFfreq = IFfreq + temp;
-  IFfreq = IFfreq << 8;
-  temp = EEPROM.read(1);
-  IFfreq = IFfreq + temp;
-  IFfreq = IFfreq << 8;
-  temp = EEPROM.read(0);
-  IFfreq = IFfreq + temp;
-
-  temp = 0;
-  temp = EEPROM.read(5);
-  cal_value = temp;
-  cal_value = cal_value <<8;
-  temp = EEPROM.read(4);
-  cal_value = cal_value + temp;
+  cal_value = EEPROM.read(5);
+  cal_value = (cal_value << 8) + EEPROM.read(4);
 }
 
 /**
