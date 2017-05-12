@@ -224,7 +224,6 @@ const unsigned long BAND_OP_FREQS[] =
   , DEFAULT_OP_FREQ_10
   };
 #else /* End of PLAN_IARU3 */
-
 #ifdef PLAN_VK
 enum band : unsigned char {
   BAND_160, BAND_80, BAND_40, BAND_30, BAND_20,
@@ -302,7 +301,7 @@ const unsigned long BAND_OP_FREQS[] =
 #endif
 #endif
 #endif
-
 #endif
+
 #endif
 // vim: tabstop=2 shiftwidth=2 expandtab:

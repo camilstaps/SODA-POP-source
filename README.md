@@ -132,7 +132,8 @@ uploading the code to the chip.
 - `TUNING_STEP_DIGITS`: which digit to blink when in a tuning step. An array of
   the same length as `TUNING_STEPS`. Values should be taken from `BLINK_NONE`,
   `BLINK_0`, `_1`, `_2` and `_3` (`0` is the rightmost digit).
-- There are several band plans. Define one of `PLAN_IARU1`, `_IARU2`, `_IARU3`.
+- There are several band plans. Define one of `PLAN_IARU1`, `_IARU2`, `_IARU3`,
+  `_VK`.
   The exact boundary definitions are in `bands.h`.
 - Change the default operating frequency of a band by defining e.g.
 
@@ -208,6 +209,8 @@ Some images of the connections:
 
 ## Changelog
 
+- 2017-05-12:
+  - VK band plans (PR [#21](/../../pull/21) by VK3IL)
 - 2017-05-04:
   - Beacon mode (issue [#6](/../../issues/6))
   - More logical UX for sending and storing memories, using RIT to cancel
