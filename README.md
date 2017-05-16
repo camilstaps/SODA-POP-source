@@ -92,10 +92,10 @@ to enter the calibration routine.
 The display will read `corr.`. You can correct the Si5351 by connecting a
 frequency counter to TP3 and fixing it to 10MHz using the rotary encoder.
 
-Move on with the keyer switch (the display will read `P. IF`). Adjust CT3 to
-peak the signal on TP2. Peak the IF LO frequency using the rotary encoder,
-peaking the signal on TP1 *with a scope*. If you changed this, go back to
-changing CT3 and repeat.
+Move on with the keyer switch (the display will show the IF frequency). Adjust
+CT3 to peak the signal on TP2. Peak the IF LO frequency using the rotary
+encoder, peaking the signal on TP1 *with a scope*. If you changed this, go back
+to changing CT3 and repeat.
 
 Move on with the keyer switch (the display will read `bn.16`) and set the band
 using the rotary encoder.
