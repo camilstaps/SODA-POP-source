@@ -149,11 +149,7 @@ void invalidate_display()
       state.display.dots = 0x1;
       break;
     case S_CALIBRATION_PEAK_IF:
-      state.display.digits[3] = LED_P;
-      state.display.digits[2] = 0x00;
-      state.display.digits[1] = LED_I;
-      state.display.digits[0] = LED_F;
-      state.display.dots = 0x9;
+      display_freq();
       break;
     case S_CALIBRATION_PEAK_RX:
       state.display.digits[3] = LED_P;

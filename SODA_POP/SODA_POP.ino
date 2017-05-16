@@ -820,9 +820,11 @@ void loop_calibration_peak_if()
   } else if (rotated_up()) {
     state.op_freq += 1000;
     invalidate_frequencies();
+    invalidate_display();
   } else if (rotated_down()) {
     state.op_freq -= 1000;
     invalidate_frequencies();
+    invalidate_display();
   }
 }
 
