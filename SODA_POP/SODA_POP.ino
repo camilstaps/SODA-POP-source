@@ -70,7 +70,7 @@ Si5351 si5351;
 #define IF_DEFAULT 491480000
 
 byte memory_pointer;
-byte errno;           // Global error number for S_ERROR
+byte errno; // Global error number for S_ERROR
 
 const int MUTE = A3;
 const int TXEN = 13; // production A0
@@ -1119,20 +1119,16 @@ void error(byte er)
  */
 byte PCA9536_read()
 {
-  byte reg_val;
-  boolean err = true; // Flag for error reading band value
-
-  while (err) {
+  for (boolean err = true; err; err = false) {
     Wire.beginTransmission(PCA9536_BUS_ADDR);
     Wire.write(byte(0x00));       // We read only from register 0, the input latch
     Wire.endTransmission(false);  // Transmit repeated start rather than stop at end of transmission
     Wire.requestFrom(PCA9536_BUS_ADDR, 1);
-    err = false;
-    if (Wire.available() != 1)    // Unable to read the band module ID (most
+    if (Wire.available() != 1) {  // Unable to read the band module ID (most
                                   // likely it's not plugged in properly, or being changed!)
       err = true;
-    else {
-      reg_val = Wire.read() & 0x0f;
+    } else {
+      byte reg_val = Wire.read() & 0x0f;
       if(reg_val < 2 || reg_val > 11) // Module has an un-supported configuration
         err = true;
     }
@@ -1173,7 +1169,7 @@ void read_module_band()
      }
 
      if (new_band != state.band) {
-       digitalWrite(MUTE, LOW);  // Make sure we are in receieve mode
+       digitalWrite(MUTE, LOW);  // Make sure we are in receive mode
        state.band = new_band;
        setup_band();             // Set the band limits and default
                                  // operating frequency for the selected band
