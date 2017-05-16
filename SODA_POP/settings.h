@@ -38,6 +38,9 @@
 /* Band selection by pressing RIT for 2s */
 #define OPT_BAND_SELECT
 
+/* Autoband selection based on plugged in module with PCA9536 PIO */
+//#define OPT_AUTO_BAND
+
 /* Erase EEPROM by pressing RIT for 8s */
 #define OPT_ERASE_EEPROM
 
@@ -48,7 +51,7 @@
 #define OPT_DFE
 
 /* Disable display when idle */
-#define OPT_DISABLE_DISPLAY
+//#define OPT_DISABLE_DISPLAY
 #define DISABLE_DISPLAY_AFTER 2500 /* Time to disable display after, in ms */
 
 /* More message memories. Select using the rotary encoder. */

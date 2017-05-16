@@ -87,6 +87,11 @@ byte memory_index_character;
 #define EEPROM_CW_SPEED  7 // 1 byte
 #endif
 
+#ifdef OPT_AUTO_BAND
+#define PCA9536_BUS_ADDR 0x41	// I2C address for PCA9536
+#undef OPT_BAND_SELECT
+#endif
+
 #endif
 
 // vim: tabstop=2 shiftwidth=2 expandtab:

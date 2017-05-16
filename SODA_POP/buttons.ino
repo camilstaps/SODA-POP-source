@@ -150,7 +150,7 @@ unsigned int time_encoder_button()
 }
 
 /**
- * Debounche the keyer button.
+ * Debounce the keyer button.
  */
 void debounce_keyer()
 {

@@ -144,6 +144,7 @@ There are several features that can be added to the rig if you want to. This is
 done by adding and removing `#define` lines to `settings.h`.
 
 - `OPT_BAND_SELECT`: change the band by pressing RIT for 2s.
+- `OPT_AUTO_BAND`: auto-select bands using a PCA9536 PIO (thanks VK3IL).
 - `OPT_ERASE_EEPROM`: erase the EEPROM by holding RIT for 8s.
 - `OPT_STORE_CW_SPEED`: store the CW speed in EEPROM.
 - `OPT_DFE`: direct frequency entry by holding the encoder button for 1s.
@@ -209,6 +210,8 @@ Some images of the connections:
 
 ## Changelog
 
+- 2017-05-16:
+  - `OPT_AUTO_BAND` (PR [#22](/../../pull/22) by VK3IL)
 - 2017-05-12:
   - VK band plans (PR [#21](/../../pull/21) by VK3IL)
 - 2017-05-04:
