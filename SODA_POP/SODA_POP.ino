@@ -143,16 +143,16 @@ void setup()
   TIMSK1 |= 1 << OCIE1A;
   interrupts();
 
-#ifdef AUTO_BAND
-  if (EEPROM.read(6) == 0xff)                  // EEPROM 6 becomes a "not calibrated" flag
-    state.state = S_CALIBRATION_CORRECTION;    // Not sure that this will have the desired effect as
-                                               // state.state is set to S_DEFAULT a few lines below...
+#ifdef OPT_AUTO_BAND
+  state.state = EEPROM.read(6) == 0xff ? S_CALIBRATION_CORRECTION : S_DEFAULT;
   read_module_band();
 #else
   state.band = (enum band) EEPROM.read(6); // check for operating band
   if (state.band == BAND_UNKNOWN) {
     state.band = (enum band) 0;
     state.state = S_CALIBRATION_CORRECTION;
+  } else {
+    state.state = S_DEFAULT;
   }
 #endif
 
@@ -163,7 +163,6 @@ void setup()
   invalidate_display();
   delay(1000);
 
-  state.state = S_DEFAULT;
   invalidate_display();
   digitalWrite(MUTE, LOW);
 
@@ -245,8 +244,9 @@ void loop_default()
     state.idle_for = DISABLE_DISPLAY_AFTER - 500;
 #endif
 
-#ifdef AUTO_BAND
-  if (tcount % 5000 == 1) read_module_band();   // Check the band module for changes every 5s
+#ifdef OPT_AUTO_BAND
+  if (tcount % 5000 == 0) // Check the band module for changes every 5s
+    read_module_band();
 #endif
 
   if (key_active()) {
@@ -807,8 +807,8 @@ void loop_calibration_peak_if()
     EEPROM.write(EEPROM_IF_FREQ + 1, state.op_freq >> 8);
     EEPROM.write(EEPROM_IF_FREQ + 2, state.op_freq >> 16);
     EEPROM.write(EEPROM_IF_FREQ + 3, state.op_freq >> 24);
- #ifdef AUTO_BAND
-    EEPROM.write(6,0);    // Reset the "not calibrated" flag now that we've written the cal values
+ #ifdef OPT_AUTO_BAND
+    EEPROM.write(6, 0); // Reset the "not calibrated" flag now that we've written the cal values
     state.state = S_CALIBRATION_PEAK_RX;
 #else
     state.state = S_CALIBRATION_CHANGE_BAND;
@@ -1106,37 +1106,36 @@ void ee_erase()
  * Enter the error state. This error is non-recoverable and should only be used
  * in very rare cases.
  */
-void error(int er)
+void error(byte er)
 {
   errno = er;
   state.state = S_ERROR;
 }
 
-#ifdef AUTO_BAND
+#ifdef OPT_AUTO_BAND
 /*
  * Read the input latch of the PCA9536 and return a 4-bit value
  * If the band module can't be read or the value is out of range, display an error and wait for a valid band module
  */
- 
 byte PCA9536_read()
 {
   byte reg_val;
-	byte err = TRUE;			// Flag for error reading band value
-	 
-	while (err) {
-	  Wire.beginTransmission(PCA9536_BUS_ADDR);
-	  Wire.write(byte(0x00));                 // We read only from register 0, the input latch
-	  Wire.endTransmission(false);	  // Transmit repeated start rather than stop at end of transmission
-	  Wire.requestFrom(PCA9536_BUS_ADDR, 1);
-    err = FALSE;
-	  if (Wire.available() != 1)  		// Unable to read the band module ID (most 
-                                    // likely it's not plugged in properly, or being changed!)
-		  err = TRUE;
-	  else {
-  	  reg_val = Wire.read() & 0x0f;
-	    if( reg_val < 2 || reg_val > 11)	  // Module has an un-supported configuration
-        err = TRUE;
-	  }
+  boolean err = true; // Flag for error reading band value
+
+  while (err) {
+    Wire.beginTransmission(PCA9536_BUS_ADDR);
+    Wire.write(byte(0x00));       // We read only from register 0, the input latch
+    Wire.endTransmission(false);  // Transmit repeated start rather than stop at end of transmission
+    Wire.requestFrom(PCA9536_BUS_ADDR, 1);
+    err = false;
+    if (Wire.available() != 1)    // Unable to read the band module ID (most
+                                  // likely it's not plugged in properly, or being changed!)
+      err = true;
+    else {
+      reg_val = Wire.read() & 0x0f;
+      if(reg_val < 2 || reg_val > 11) // Module has an un-supported configuration
+        err = true;
+    }
     if (err) {
       state.display.digits[3] = LED_N_6;
       state.display.digits[2] = LED_n;
@@ -1144,21 +1143,20 @@ byte PCA9536_read()
       state.display.digits[0] = LED_r;
       state.display.dots = 0x0;
       delay(500);
-	  }
-	}
+    }
+  }
   invalidate_display();
- 	return reg_val;
+  return reg_val;
 }
 
 /*
  * Check if the band module has changed and if it has, reset bandlimits and operating frequency
  */
- 
 void read_module_band()
-{    
+{
      enum band new_band;
-	 
-     switch (PCA9536_read()) {                // Map returned value to current band table range
+
+     switch (PCA9536_read()) { // Map returned value to current band table range
        case 2:   new_band = BAND_160; break;
        case 3:   new_band = BAND_80;  break;
 #ifdef BAND_60
@@ -1173,17 +1171,17 @@ void read_module_band()
        case 11:  new_band = BAND_10;  break;
        default:  new_band = BAND_UNKNOWN; error(3); break;
      }
-     
+
      if (new_band != state.band) {
-		   digitalWrite(MUTE, LOW);	 // Make sure we are in receieve mode
-		   state.band = new_band;
-       setup_band();             // Set the band limits and default 
+       digitalWrite(MUTE, LOW);  // Make sure we are in receieve mode
+       state.band = new_band;
+       setup_band();             // Set the band limits and default
                                  // operating frequency for the selected band
        display_band();
        delay(2000);              // Allow time to view the band on the display
        invalidate_display();
      }
 }
-
 #endif
+
 // vim: tabstop=2 shiftwidth=2 expandtab:

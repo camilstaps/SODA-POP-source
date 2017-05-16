@@ -165,8 +165,8 @@ void invalidate_display()
     case S_ERROR:
       state.display.digits[3] = LED_E;
       state.display.digits[2] = LED_r;
-      state.display.digits[1] = 0x00;
-      state.display.digits[0] = LED_DIGITS[errno];
+      state.display.digits[0] = LED_DIGITS[errno / 10];
+      state.display.digits[0] = LED_DIGITS[errno % 10];
       state.display.dots = 0x2;
       break;
   }

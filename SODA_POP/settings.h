@@ -22,11 +22,12 @@
  * - PLAN_IARU1
  * - PLAN_IARU2
  * - PLAN_IARU3
+ * - PLAN_VK
  * It is possible to override the default operating frequency using:
  * #define DEFAULT_OP_FREQ_20 1405500000
  * ... setting the default frequency to 14.055 MHz on 20m.
  */
-#define PLAN_IARU3
+#define PLAN_IARU2
 
 /* Custom default operating frequencies, per band, in mHz.
  * See bands.h for defaults */
@@ -37,8 +38,8 @@
 /* Band selection by pressing RIT for 2s */
 #define OPT_BAND_SELECT
 
-/* Autoband selection based on plugged in module - enabled by PCA9536 PIO on board module */
-#define AUTO_BAND
+/* Autoband selection based on plugged in module with PCA9536 PIO */
+//#define OPT_AUTO_BAND
 
 /* Erase EEPROM by pressing RIT for 8s */
 #define OPT_ERASE_EEPROM
