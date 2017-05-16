@@ -35,6 +35,9 @@
 
 /* Custom features. For more details, see README.md. */
 
+/* Hide leading zeroes on the frequency display */
+#define OPT_HIDE_LEADING_ZEROES
+
 /* Band selection by pressing RIT for 2s */
 #define OPT_BAND_SELECT
 

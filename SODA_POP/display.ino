@@ -249,16 +249,23 @@ void display_rit()
  */
 void display_freq()
 {
-  // First divide by 100 to remove the fractional Hz digits
   unsigned long frequency = state.op_freq/100;
-  // Then display the digits one by one
+#ifdef OPT_HIDE_LEADING_ZEROES
+  noInterrupts();
+#endif
   state.display.digits[3] = LED_DIGITS[(frequency % 1000000) / 100000];
-  if (state.display.digits[3] == LED_N_0)
-    state.display.digits[3] = 0x00; //blank MSD if 0
   state.display.digits[2] = LED_DIGITS[(frequency % 100000) / 10000];
   state.display.digits[1] = LED_DIGITS[(frequency % 10000) / 1000];
   state.display.digits[0] = LED_DIGITS[(frequency % 1000) / 100];
   state.display.dots = 0x2;
+#ifdef OPT_HIDE_LEADING_ZEROES
+  if (state.display.digits[3] == LED_N_0) {
+    state.display.digits[3] = 0x00;
+    if (state.display.digits[2] == LED_N_0)
+      state.display.digits[2] = 0x00;
+  }
+  interrupts();
+#endif
   state.display.blinking = tuning_blinks[state.tuning_step];
 }
 
