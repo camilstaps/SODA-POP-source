@@ -271,10 +271,10 @@ void loop_default()
         dfe_character = 0xff;
         dfe_position = 3;
         dfe_freq = 0;
-        invalidate_display();
       } else {
         morse(MX);
       }
+      invalidate_display();
     } else
 #endif
     if (duration > 50) {
