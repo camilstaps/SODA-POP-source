@@ -144,10 +144,12 @@ void setup()
   interrupts();
 
 #ifdef OPT_AUTO_BAND
-  state.state = EEPROM.read(6) == 0xff ? S_CALIBRATION_CORRECTION : S_DEFAULT;
+  state.state = EEPROM.read(EEPROM_BAND) == 0xff
+    ? S_CALIBRATION_CORRECTION
+    : S_DEFAULT;
   read_module_band();
 #else
-  state.band = (enum band) EEPROM.read(6); // check for operating band
+  state.band = (enum band) EEPROM.read(EEPROM_BAND);
   if (state.band == BAND_UNKNOWN) {
     state.band = (enum band) 0;
     state.state = S_CALIBRATION_CORRECTION;
@@ -774,8 +776,10 @@ void loop_error()
 void loop_calibration_correction()
 {
   if (state.inputs.keyer) {
-    EEPROM.write(EEPROM_CAL_VALUE, cal_value);
+    EEPROM.write(EEPROM_CAL_VALUE + 0, cal_value);
     EEPROM.write(EEPROM_CAL_VALUE + 1, cal_value >> 8);
+    EEPROM.write(EEPROM_CAL_VALUE + 2, cal_value >> 16);
+    EEPROM.write(EEPROM_CAL_VALUE + 3, cal_value >> 24);
 
     state.state = S_CALIBRATION_PEAK_IF;
     state.op_freq = IFfreq == 0xfffffffful ? IF_DEFAULT : IFfreq;
@@ -803,12 +807,12 @@ void loop_calibration_peak_if()
 {
   if (state.inputs.keyer) {
     IFfreq = state.op_freq;
-    EEPROM.write(EEPROM_IF_FREQ, state.op_freq);
+    EEPROM.write(EEPROM_IF_FREQ + 0, state.op_freq);
     EEPROM.write(EEPROM_IF_FREQ + 1, state.op_freq >> 8);
     EEPROM.write(EEPROM_IF_FREQ + 2, state.op_freq >> 16);
     EEPROM.write(EEPROM_IF_FREQ + 3, state.op_freq >> 24);
  #ifdef OPT_AUTO_BAND
-    EEPROM.write(6, 0); // Reset the "not calibrated" flag now that we've written the cal values
+    EEPROM.write(EEPROM_BAND, 0); // Reset the "not calibrated" flag now that we've written the cal values
     state.state = S_CALIBRATION_PEAK_RX;
 #else
     state.state = S_CALIBRATION_CHANGE_BAND;
@@ -987,13 +991,15 @@ void calibration_set_correction()
  */
 void fetch_calibration_data()
 {
-  IFfreq = EEPROM.read(3);
-  IFfreq = (IFfreq << 8) + EEPROM.read(2);
-  IFfreq = (IFfreq << 8) + EEPROM.read(1);
-  IFfreq = (IFfreq << 8) + EEPROM.read(0);
+  IFfreq =                 EEPROM.read(EEPROM_IF_FREQ + 3);
+  IFfreq = (IFfreq << 8) + EEPROM.read(EEPROM_IF_FREQ + 2);
+  IFfreq = (IFfreq << 8) + EEPROM.read(EEPROM_IF_FREQ + 1);
+  IFfreq = (IFfreq << 8) + EEPROM.read(EEPROM_IF_FREQ + 0);
 
-  cal_value = EEPROM.read(5);
-  cal_value = (cal_value << 8) + EEPROM.read(4);
+  cal_value =                    EEPROM.read(EEPROM_CAL_VALUE + 3);
+  cal_value = (cal_value << 8) + EEPROM.read(EEPROM_CAL_VALUE + 2);
+  cal_value = (cal_value << 8) + EEPROM.read(EEPROM_CAL_VALUE + 1);
+  cal_value = (cal_value << 8) + EEPROM.read(EEPROM_CAL_VALUE + 0);
 }
 
 /**

@@ -81,11 +81,11 @@ byte memory_index_character;
 #endif
 
 #define EEPROM_IF_FREQ   0 // 4 bytes
-#define EEPROM_CAL_VALUE 4 // 2 bytes
 #define EEPROM_BAND      6 // 1 byte
 #ifdef OPT_STORE_CW_SPEED
 #define EEPROM_CW_SPEED  7 // 1 byte
 #endif
+#define EEPROM_CAL_VALUE 8 // 4 bytes
 
 #ifdef OPT_AUTO_BAND
 #define PCA9536_BUS_ADDR 0x41	// I2C address for PCA9536

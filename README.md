@@ -211,6 +211,10 @@ Some images of the connections:
 
 ## Changelog
 
+- 2017-06-05:
+  - Fixed issue where large correction values for the Si5351 were not stored
+	properly (issue [#26](/../../issues/26); requires recalibration of the
+	correction value)
 - 2017-05-16:
   - `OPT_AUTO_BAND` (PR [#22](/../../pull/22) by VK3IL)
   - Made hiding leading zeroes on frequency display a compile-time option
