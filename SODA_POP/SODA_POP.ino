@@ -814,6 +814,7 @@ void loop_calibration_peak_if()
  #ifdef OPT_AUTO_BAND
     EEPROM.write(EEPROM_BAND, 0); // Reset the "not calibrated" flag now that we've written the cal values
     state.state = S_CALIBRATION_PEAK_RX;
+    enable_rx_tx(RX_ON_TX_ON);
 #else
     state.state = S_CALIBRATION_CHANGE_BAND;
 #endif
