@@ -939,7 +939,7 @@ void key_handle_dot()
 
 /**
  * Handle the end of a dash or dot.
- * A 2ms delay is included between switching off the +12V TX and switching off the clock to 
+ * A 5ms delay is included between switching off the +12V TX and switching off the clock to 
  * ensure anti key-click tail is completed.
  * See key_handle_dash() and key_handle_dot().
  */
@@ -947,7 +947,7 @@ void key_handle_dashdot_end()
 {
   SIDETONE_DISABLE();
   digitalWrite(TXEN, LOW);
-  delay(2);
+  delay(5);
   enable_rx_tx(RX_ON_TX_OFF);
   digitalWrite(MUTE, LOW);
 }
