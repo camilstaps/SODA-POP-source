@@ -910,6 +910,8 @@ void key_handle_end()
 /**
  * Handle a dash. In TX modes, this will enable TXEN. In other cases, the
  * detected character is updated. The sidetone will be enabled.
+ * A 1ms delay is included between enabling the clock and switching on +12V TX to 
+ * ensure clock is running before DC is applied to the PA.
  * Also see key_handle_dot() and key_handle_dashdot_end().
  */
 void key_handle_dash()
@@ -918,6 +920,7 @@ void key_handle_dash()
   SIDETONE_ENABLE();
   if (state.state == S_KEYING || state.state == S_MEM_SEND_TX) {
     enable_rx_tx(RX_OFF_TX_ON);
+    delay(1);
     digitalWrite(TXEN, HIGH);
   } else {
     morse_char = (morse_char << 1) | 0x01;
@@ -933,6 +936,7 @@ void key_handle_dot()
   SIDETONE_ENABLE();
   if (state.state == S_KEYING || state.state == S_MEM_SEND_TX) {
     enable_rx_tx(RX_OFF_TX_ON);
+    delay(1);
     digitalWrite(TXEN, HIGH);
   } else {
     morse_char <<= 1;
@@ -941,12 +945,15 @@ void key_handle_dot()
 
 /**
  * Handle the end of a dash or dot.
+ * A 2ms delay is included between switching off the +12V TX and switching off the clock to 
+ * ensure anti key-click tail is completed.
  * See key_handle_dash() and key_handle_dot().
  */
 void key_handle_dashdot_end()
 {
   SIDETONE_DISABLE();
   digitalWrite(TXEN, LOW);
+  delay(2);
   enable_rx_tx(RX_ON_TX_OFF);
   digitalWrite(MUTE, LOW);
 }
@@ -961,6 +968,7 @@ void straight_key_handle_enable()
   SIDETONE_ENABLE();
   digitalWrite(MUTE, HIGH);
   enable_rx_tx(RX_OFF_TX_ON);
+  delay(1);
   digitalWrite(TXEN, HIGH);
 }
 
