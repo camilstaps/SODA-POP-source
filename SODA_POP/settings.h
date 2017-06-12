@@ -54,7 +54,7 @@
 #define OPT_DFE
 
 /* Disable display when idle */
-#define OPT_DISABLE_DISPLAY
+//#define OPT_DISABLE_DISPLAY
 #define DISABLE_DISPLAY_AFTER 2500 /* Time to disable display after, in ms */
 
 /* More message memories. Select using the rotary encoder. */
