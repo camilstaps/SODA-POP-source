@@ -681,13 +681,11 @@ void loop_mem_send_wait()
   // Paddle chooses a memory
   if (!digitalRead(DASHin)) {
     state.state = S_MEM_SEND_TX;
-    transmit_memory(0);
-    state.state = S_DEFAULT;
+    load_memory_for_tx(0);
     invalidate_display();
   } else if (!digitalRead(DOTin)) {
     state.state = S_MEM_SEND_TX;
     load_memory_for_tx(1);
-    state.state = S_DEFAULT;
     invalidate_display();
   }
 #endif
@@ -722,7 +720,9 @@ void loop_mem_send_tx()
       case 0xff:
         state.mem_tx_index = 0;
         if (!state.beacon) {
+#ifdef OPT_MORE_MEMORIES
           memory_index = 0;
+#endif
           state.state = S_DEFAULT;
           invalidate_display();
         } else {
@@ -731,7 +731,9 @@ void loop_mem_send_tx()
             if (state.inputs.keyer || state.inputs.rit) {
               if (state.inputs.keyer)
                 state.beacon = 0;
+#ifdef OPT_MORE_MEMORIES
               memory_index = 0;
+#endif
               state.state = S_DEFAULT;
               invalidate_display();
               debounce_keyer();
