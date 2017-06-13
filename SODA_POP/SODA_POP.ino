@@ -67,7 +67,7 @@ Si5351 si5351;
 #define RX_ON_TX_OFF  0xfe
 #define RX_OFF_TX_OFF 0xff
 
-#define IF_DEFAULT 491480000
+#define IF_DEFAULT 491480000ul
 
 byte memory_pointer;
 byte errno; // Global error number for S_ERROR
@@ -317,6 +317,8 @@ void loop_default()
 #ifdef OPT_ERASE_EEPROM
     if (duration > 8000) {
       ee_erase();
+      delay(1000);
+      invalidate_display();
 #ifdef OPT_DISABLE_DISPLAY
       state.idle_for = -1;
 #endif
@@ -1118,7 +1120,7 @@ void store_cw_speed()
  */
 void ee_erase()
 {
-  for (byte i=0; i<=7; i++)
+  for (byte i = 0; i <= MEMORY_EEPROM_START; i++)
     EEPROM.write(i, 0xff);
   state.display.digits[3] = LED_d;
   state.display.digits[2] = LED_N_0;
