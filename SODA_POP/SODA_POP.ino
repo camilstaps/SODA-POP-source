@@ -110,7 +110,6 @@ void setup()
   state.key.mode = KEY_IAMBIC;
 #ifdef OPT_STORE_CW_SPEED
   state.key.speed = EEPROM.read(EEPROM_CW_SPEED);
-  adjust_cs(0);
 #else
   state.key.speed = WPM_DEFAULT;
 #endif
@@ -165,8 +164,13 @@ void setup()
   si5351.set_correction(cal_value); //correct the clock chip error
   state.tuning_step = 0;
   setup_band();
-  invalidate_display();
-  delay(1000);
+
+  if (state.state == S_DEFAULT) {
+    state.state = S_CALIBRATION_CHANGE_BAND; // To show the band on startup
+    invalidate_display();
+    delay(1000);
+    state.state = S_DEFAULT;
+  }
 
   invalidate_display();
   digitalWrite(MUTE, LOW);
