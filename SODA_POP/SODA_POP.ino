@@ -147,12 +147,15 @@ void setup()
   state.state = EEPROM.read(EEPROM_BAND) == 0xff
     ? S_CALIBRATION_CORRECTION
     : S_DEFAULT;
+  if (state.state == S_CALIBRATION_CORRECTION)
+    enable_rx_tx(RX_OFF_TX_ON);
   read_module_band();
 #else
   state.band = (enum band) EEPROM.read(EEPROM_BAND);
   if (state.band == BAND_UNKNOWN) {
     state.band = (enum band) 0;
     state.state = S_CALIBRATION_CORRECTION;
+    enable_rx_tx(RX_OFF_TX_ON);
   } else {
     state.state = S_DEFAULT;
   }
