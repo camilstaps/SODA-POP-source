@@ -1146,6 +1146,7 @@ void error(byte er)
  */
 byte PCA9536_read()
 {
+  byte reg_val;
   for (boolean err = true; err; err = false) {
     Wire.beginTransmission(PCA9536_BUS_ADDR);
     Wire.write(byte(0x00));       // We read only from register 0, the input latch
@@ -1155,7 +1156,7 @@ byte PCA9536_read()
                                   // likely it's not plugged in properly, or being changed!)
       err = true;
     } else {
-      byte reg_val = Wire.read() & 0x0f;
+      reg_val = Wire.read() & 0x0f;
       if(reg_val < 2 || reg_val > 11) // Module has an un-supported configuration
         err = true;
     }
