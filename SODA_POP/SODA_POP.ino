@@ -1147,18 +1147,17 @@ void error(byte er)
 byte PCA9536_read()
 {
   byte reg_val;
-  for (boolean err = true; err; err = false) {
+  boolean err = true;
+  
+  while (err) {
     Wire.beginTransmission(PCA9536_BUS_ADDR);
     Wire.write(byte(0x00));       // We read only from register 0, the input latch
     Wire.endTransmission(false);  // Transmit repeated start rather than stop at end of transmission
     Wire.requestFrom(PCA9536_BUS_ADDR, 1);
-    if (Wire.available() != 1) {  // Unable to read the band module ID (most
-                                  // likely it's not plugged in properly, or being changed!)
-      err = true;
-    } else {
+    if (Wire.available() == 1) {
       reg_val = Wire.read() & 0x0f;
-      if(reg_val < 2 || reg_val > 11) // Module has an un-supported configuration
-        err = true;
+      if(reg_val >= 2 && reg_val <= 11) // Module configuration is good
+        err = false;
     }
     if (err) {
       state.display.digits[3] = LED_N_6;
@@ -1183,7 +1182,7 @@ void read_module_band()
      switch (PCA9536_read()) { // Map returned value to current band table range
        case 2:   new_band = BAND_160; break;
        case 3:   new_band = BAND_80;  break;
-#ifdef BAND_60
+#if defined PLAN_IARU1 || defined PLAN_IARU2
        case 4:   new_band = BAND_60;  break;
 #endif
        case 5:   new_band = BAND_40;  break;
