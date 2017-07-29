@@ -386,7 +386,9 @@ void loop_adjust_cs()
   } else if (state.inputs.keyer) {
     state.state = S_DEFAULT;
     load_cw_speed();
+#ifdef OPT_STORE_CW_SPEED
     store_cw_speed();
+#endif
     invalidate_display();
     debounce_keyer();
   }
