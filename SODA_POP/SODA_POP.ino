@@ -1150,7 +1150,7 @@ byte PCA9536_read()
 {
   byte reg_val;
   boolean err = true;
-  
+
   while (err) {
     Wire.beginTransmission(PCA9536_BUS_ADDR);
     Wire.write(byte(0x00));       // We read only from register 0, the input latch
@@ -1170,6 +1170,7 @@ byte PCA9536_read()
       delay(500);
     }
   }
+
   invalidate_display();
   return reg_val;
 }
@@ -1179,33 +1180,33 @@ byte PCA9536_read()
  */
 void read_module_band()
 {
-     enum band new_band;
+   enum band new_band;
 
-     switch (PCA9536_read()) { // Map returned value to current band table range
-       case 2:   new_band = BAND_160; break;
-       case 3:   new_band = BAND_80;  break;
+   switch (PCA9536_read()) { // Map returned value to current band table range
+     case 2:  new_band = BAND_160; break;
+     case 3:  new_band = BAND_80;  break;
 #if defined PLAN_IARU1 || defined PLAN_IARU2
-       case 4:   new_band = BAND_60;  break;
+     case 4:  new_band = BAND_60;  break;
 #endif
-       case 5:   new_band = BAND_40;  break;
-       case 6:   new_band = BAND_30;  break;
-       case 7:   new_band = BAND_20;  break;
-       case 8:   new_band = BAND_17;  break;
-       case 9:   new_band = BAND_15;  break;
-       case 10:  new_band = BAND_12;  break;
-       case 11:  new_band = BAND_10;  break;
-       default:  new_band = BAND_UNKNOWN; error(3); break;
-     }
+     case 5:  new_band = BAND_40;  break;
+     case 6:  new_band = BAND_30;  break;
+     case 7:  new_band = BAND_20;  break;
+     case 8:  new_band = BAND_17;  break;
+     case 9:  new_band = BAND_15;  break;
+     case 10: new_band = BAND_12;  break;
+     case 11: new_band = BAND_10;  break;
+     default: new_band = BAND_UNKNOWN; error(3); break;
+   }
 
-     if (new_band != state.band) {
-       digitalWrite(MUTE, LOW);  // Make sure we are in receive mode
-       state.band = new_band;
-       setup_band();             // Set the band limits and default
-                                 // operating frequency for the selected band
-       display_band();
-       delay(2000);              // Allow time to view the band on the display
-       invalidate_display();
-     }
+   if (new_band != state.band) {
+     digitalWrite(MUTE, LOW);  // Make sure we are in receive mode
+     state.band = new_band;
+     setup_band();             // Set the band limits and default
+                               // operating frequency for the selected band
+     display_band();
+     delay(2000);              // Allow time to view the band on the display
+     invalidate_display();
+   }
 }
 #endif
 
