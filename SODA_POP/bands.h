@@ -7,12 +7,15 @@
 
 #ifdef PLAN_IARU1
 enum band : unsigned char {
-  BAND_160, BAND_80, BAND_60, BAND_40, BAND_30, BAND_20,
+  BAND_630, BAND_160, BAND_80, BAND_60, BAND_40, BAND_30, BAND_20,
   BAND_17, BAND_15, BAND_12, BAND_10,
   LAST_BAND, BAND_UNKNOWN = 0xff
 };
-const unsigned char BAND_DIGITS_2[] = {1,8,6,4,3,2,1,1,1,1};
-const unsigned char BAND_DIGITS_1[] = {6,0,0,0,0,0,7,5,2,0};
+const unsigned char BAND_DIGITS_2[] = {6,1,8,6,4,3,2,1,1,1,1};
+const unsigned char BAND_DIGITS_1[] = {3,6,0,0,0,0,0,7,5,2,0};
+# ifndef DEFAULT_OP_FREQ_630
+# define DEFAULT_OP_FREQ_630 47250000
+# endif
 # ifndef DEFAULT_OP_FREQ_160
 # define DEFAULT_OP_FREQ_160 183600000
 # endif
@@ -44,7 +47,8 @@ const unsigned char BAND_DIGITS_1[] = {6,0,0,0,0,0,7,5,2,0};
 # define DEFAULT_OP_FREQ_10 2806000000u
 # endif
 const unsigned long BAND_LIMITS_LOW[] =
-  {  181000000
+  {  47200000
+  ,  181000000
   ,  350000000
   ,  535150000
   ,  700000000
@@ -56,7 +60,8 @@ const unsigned long BAND_LIMITS_LOW[] =
   , 2800000000u
   };
 const unsigned long BAND_LIMITS_HIGH[] =
-  {  200000000
+  {  47900000
+  ,  200000000
   ,  380000000
   ,  536650000
   ,  720000000
@@ -68,7 +73,8 @@ const unsigned long BAND_LIMITS_HIGH[] =
   , 2970000000u
   };
 const unsigned long BAND_OP_FREQS[] =
-  { DEFAULT_OP_FREQ_160
+  { DEFAULT_OP_FREQ_630
+  , DEFAULT_OP_FREQ_160
   , DEFAULT_OP_FREQ_80
   , DEFAULT_OP_FREQ_60
   , DEFAULT_OP_FREQ_40
@@ -82,12 +88,15 @@ const unsigned long BAND_OP_FREQS[] =
 #else /* End of PLAN_IARU1 */
 #ifdef PLAN_IARU2
 enum band : unsigned char {
-  BAND_160, BAND_80, BAND_60, BAND_40, BAND_30, BAND_20,
+  BAND_630, BAND_160, BAND_80, BAND_60, BAND_40, BAND_30, BAND_20,
   BAND_17, BAND_15, BAND_12, BAND_10,
   LAST_BAND, BAND_UNKNOWN = 0xff
 };
-const unsigned char BAND_DIGITS_2[] = {1,8,6,4,3,2,1,1,1,1};
-const unsigned char BAND_DIGITS_1[] = {6,0,0,0,0,0,7,5,2,0};
+const unsigned char BAND_DIGITS_2[] = {6,1,8,6,4,3,2,1,1,1,1};
+const unsigned char BAND_DIGITS_1[] = {3,6,0,0,0,0,0,7,5,2,0};
+# ifndef DEFAULT_OP_FREQ_630
+# define DEFAULT_OP_FREQ_630 47250000
+# endif
 # ifndef DEFAULT_OP_FREQ_160
 # define DEFAULT_OP_FREQ_160 181200000
 # endif
@@ -119,7 +128,8 @@ const unsigned char BAND_DIGITS_1[] = {6,0,0,0,0,0,7,5,2,0};
 # define DEFAULT_OP_FREQ_10 2806000000u
 # endif
 const unsigned long BAND_LIMITS_LOW[] =
-  {  180000000
+  {  47200000
+  ,  180000000
   ,  350000000
   ,  535150000
   ,  700000000
@@ -131,7 +141,8 @@ const unsigned long BAND_LIMITS_LOW[] =
   , 2800000000u
   };
 const unsigned long BAND_LIMITS_HIGH[] =
-  {  200000000
+  {  47900000
+  ,  200000000
   ,  400000000
   ,  536650000
   ,  730000000
@@ -143,7 +154,8 @@ const unsigned long BAND_LIMITS_HIGH[] =
   , 2970000000u
   };
 const unsigned long BAND_OP_FREQS[] =
-  { DEFAULT_OP_FREQ_160
+  { DEFAULT_OP_FREQ_630
+  , DEFAULT_OP_FREQ_160
   , DEFAULT_OP_FREQ_80
   , DEFAULT_OP_FREQ_60
   , DEFAULT_OP_FREQ_40
@@ -157,12 +169,15 @@ const unsigned long BAND_OP_FREQS[] =
 #else /* End of PLAN_IARU2 */
 #ifdef PLAN_IARU3
 enum band : unsigned char {
-  BAND_160, BAND_80, BAND_40, BAND_30, BAND_20,
+  BAND_630, BAND_160, BAND_80, BAND_40, BAND_30, BAND_20,
   BAND_17, BAND_15, BAND_12, BAND_10,
   LAST_BAND, BAND_UNKNOWN = 0xff
 };
-const unsigned char BAND_DIGITS_2[] = {1,8,4,3,2,1,1,1,1};
-const unsigned char BAND_DIGITS_1[] = {6,0,0,0,0,7,5,2,0};
+const unsigned char BAND_DIGITS_2[] = {6,1,8,4,3,2,1,1,1,1};
+const unsigned char BAND_DIGITS_1[] = {3,6,0,0,0,0,7,5,2,0};
+# ifndef DEFAULT_OP_FREQ_630
+# define DEFAULT_OP_FREQ_630 47250000
+# endif
 # ifndef DEFAULT_OP_FREQ_160
 # define DEFAULT_OP_FREQ_160 181200000
 # endif
@@ -191,7 +206,8 @@ const unsigned char BAND_DIGITS_1[] = {6,0,0,0,0,7,5,2,0};
 # define DEFAULT_OP_FREQ_10 2806000000u
 # endif
 const unsigned long BAND_LIMITS_LOW[] =
-  {  180000000
+  {  47200000
+  ,  180000000
   ,  350000000
   ,  700000000
   , 1010000000
@@ -202,7 +218,8 @@ const unsigned long BAND_LIMITS_LOW[] =
   , 2800000000u
   };
 const unsigned long BAND_LIMITS_HIGH[] =
-  {  200000000
+  {  47900000
+  ,  200000000
   ,  390000000
   ,  730000000
   , 1015000000
@@ -213,7 +230,8 @@ const unsigned long BAND_LIMITS_HIGH[] =
   , 2970000000u
   };
 const unsigned long BAND_OP_FREQS[] =
-  { DEFAULT_OP_FREQ_160
+  { DEFAULT_OP_FREQ_630
+  , DEFAULT_OP_FREQ_160
   , DEFAULT_OP_FREQ_80
   , DEFAULT_OP_FREQ_40
   , DEFAULT_OP_FREQ_30
@@ -226,12 +244,15 @@ const unsigned long BAND_OP_FREQS[] =
 #else /* End of PLAN_IARU3 */
 #ifdef PLAN_VK
 enum band : unsigned char {
-  BAND_160, BAND_80, BAND_40, BAND_30, BAND_20,
+  BAND_630, BAND_160, BAND_80, BAND_40, BAND_30, BAND_20,
   BAND_17, BAND_15, BAND_12, BAND_10,
   LAST_BAND, BAND_UNKNOWN = 0xff
 };
-const unsigned char BAND_DIGITS_2[] = {1,8,4,3,2,1,1,1,1};
-const unsigned char BAND_DIGITS_1[] = {6,0,0,0,0,7,5,2,0};
+const unsigned char BAND_DIGITS_2[] = {6,1,8,4,3,2,1,1,1,1};
+const unsigned char BAND_DIGITS_1[] = {3,6,0,0,0,0,7,5,2,0};
+# ifndef DEFAULT_OP_FREQ_630
+# define DEFAULT_OP_FREQ_630 47250000
+# endif
 # ifndef DEFAULT_OP_FREQ_160
 # define DEFAULT_OP_FREQ_160 183200000
 # endif
@@ -260,7 +281,8 @@ const unsigned char BAND_DIGITS_1[] = {6,0,0,0,0,7,5,2,0};
 # define DEFAULT_OP_FREQ_10 2806200000u
 # endif
 const unsigned long BAND_LIMITS_LOW[] =
-  {  180000000
+  {  47200000
+  ,  180000000
   ,  350000000
   ,  700000000
   , 1010000000
@@ -271,7 +293,8 @@ const unsigned long BAND_LIMITS_LOW[] =
   , 2800000000u
   };
 const unsigned long BAND_LIMITS_HIGH[] =
-  {  187500000
+  {  47900000
+  ,  187500000
   ,  380000000
   ,  730000000
   , 1015000000
@@ -286,7 +309,8 @@ const unsigned long BAND_LIMITS_HIGH[] =
 #define BAND_80_HIGH_BOTTOM 377600000
 #define BAND_80_GAP_MIDDLE (BAND_80_LOW_TOP+BAND_80_HIGH_BOTTOM)/2
 const unsigned long BAND_OP_FREQS[] =
-  { DEFAULT_OP_FREQ_160
+  { DEFAULT_OP_FREQ_630
+  , DEFAULT_OP_FREQ_160
   , DEFAULT_OP_FREQ_80
   , DEFAULT_OP_FREQ_40
   , DEFAULT_OP_FREQ_30
