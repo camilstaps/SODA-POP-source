@@ -1,10 +1,10 @@
 # SODA POP source
 
 This repository contains the source for the [SODA POP][sodapop] by [Steve Weber
-KD1JV][kd1jv], a single band QRP CW transceiver on a 3.6" square board.
+KD1JV][KD1JV], a single band QRP CW transceiver on a 3.6" square board.
 
-The original code is copyright &copy; [Steven Weber KD1JV][kd1jv], additions
-and changes are copyright &copy; [Camil Staps PD7LOL][cs]. This only goes for
+The original code is copyright &copy; [Steven Weber KD1JV][KD1JV], additions
+and changes are copyright &copy; [PA5ET][] and [VK3IL][]. This only goes for
 the `SODA_POP` directory. Everything is licensed under GPL v3, see the LICENSE
 file.
 
@@ -257,8 +257,9 @@ Some images of the connections:
   - Added bands up to 10m and enabled run-time band switching
   - Fixed rotary encoder issues
 
-[cs]: https://camilstaps.nl
-[kd1jv]: http://kd1jv.qrpradio.com/
+[KD1JV]: http://kd1jv.qrpradio.com/
+[PA5ET]: https://camilstaps.nl
+[VK3IL]: https://www.vk3il.net/
 [sodapop]: https://groups.yahoo.com/neo/groups/AT_Sprint/files/SODA%20POP/
 [uno]: https://www.arduino.cc/en/Main/ArduinoBoardUno
 [uno-prog]: https://www.arduino.cc/en/Tutorial/ArduinoToBreadboard
