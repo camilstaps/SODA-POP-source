@@ -87,12 +87,13 @@ void iambic_key()
     do {
       if (digitalRead(DASHin) == LOW)
         dash();
-      if (digitalRead(DOTin) == LOW)
+      if (digitalRead(DOTin) == LOW || state.key.dot)
         dot();
-      if (state.key.dash)
+      while (state.key.dash) {
         dash();
-      if (state.key.dot)
-        dot();
+        if (state.key.dot)
+          dot();
+      }
     } while (!state.key.timeout);
 
     state.key.timer = state.key.dash_time * 2;
