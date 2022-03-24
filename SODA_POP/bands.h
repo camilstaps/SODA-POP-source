@@ -1,4 +1,17 @@
-/* Copyright (C) 2017 Camil Staps <pd7lol@camilstaps.nl> */
+/**
+ * Copyright (C) 2017, 2022 Camil Staps <pa5et@camilstaps.nl>
+ * Copyright (C) 2017, 2019 David Giddy
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ */
 
 #ifndef _H_BANDS
 #define _H_BANDS
@@ -61,7 +74,7 @@ const unsigned long BAND_LIMITS_LOW[] =
   };
 const unsigned long BAND_LIMITS_HIGH[] =
   {  47900000
-  ,  200000000
+  ,  199999999
   ,  380000000
   ,  536650000
   ,  720000000
@@ -142,8 +155,8 @@ const unsigned long BAND_LIMITS_LOW[] =
   };
 const unsigned long BAND_LIMITS_HIGH[] =
   {  47900000
-  ,  200000000
-  ,  400000000
+  ,  199999999
+  ,  399999999
   ,  536650000
   ,  730000000
   , 1015000000
@@ -219,7 +232,7 @@ const unsigned long BAND_LIMITS_LOW[] =
   };
 const unsigned long BAND_LIMITS_HIGH[] =
   {  47900000
-  ,  200000000
+  ,  199999999
   ,  390000000
   ,  730000000
   , 1015000000

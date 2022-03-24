@@ -1,5 +1,6 @@
 /**
- * Copyright (C) 2017 Camil Staps <pd7lol@camilstaps.nl>
+ * Copyright (C) 2017, 2022 Camil Staps <pa5et@camilstaps.nl>
+ * Copyright (C) 2017 David Giddy
  *
  * This code is based on The original software by Steven Weber, which was:
  * Copyright (C) 2017 Steven Weber KD1JV <steve.kd1jv@gmail.com>.
@@ -436,7 +437,7 @@ void loop_change_band()
 void loop_dfe()
 {
   if (dfe_character != 0xff) {
-    unsigned int add;
+    unsigned long add;
     switch (dfe_character) {
       case M0: case MT: add = 0; break;
 #ifdef OPT_OBSCURE_MORSE_ABBREVIATIONS
@@ -471,15 +472,15 @@ void loop_dfe()
     dfe_freq += add;
 
     if (dfe_position-- == 0) {
-      set_dfe();
-      morse(MR);
+      bool success = set_dfe();
+      morse(success ? MR : MF);
     }
 
     invalidate_display();
   } else if (state.inputs.keyer) {
-    set_dfe();
+    bool success = set_dfe();
     invalidate_display();
-    morse(MR);
+    morse(success ? MR : MF);
     debounce_keyer();
   } else if (state.inputs.rit) {
     state.state = S_DEFAULT;
@@ -496,13 +497,15 @@ void loop_dfe()
  * The operating frequency is fixed between the band limits.
  * The system returns to S_DEFAULT state.
  */
-void set_dfe()
+bool set_dfe()
 {
-  state.op_freq = (BAND_LIMITS_LOW[state.band] / 10000000) * 10000000;
+  state.op_freq = (BAND_LIMITS_LOW[state.band] / 100000000) * 100000000;
   state.op_freq += ((unsigned long) dfe_freq) * 10000;
+  unsigned long tried_op_freq = state.op_freq;
   fix_op_freq();
   invalidate_frequencies();
   state.state = S_DEFAULT;
+  return tried_op_freq == state.op_freq;
 }
 #endif
 
